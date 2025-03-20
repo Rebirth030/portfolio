@@ -1,18 +1,28 @@
 import './style.css';
 import {createRoot} from 'react-dom/client'
-import * as THREE from 'three/webgpu'
-import * as TSL from 'three/tsl'
+import {WebGPURenderer} from 'three/webgpu'
+import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
+
 import {Canvas} from '@react-three/fiber'
 import Game from './Game'
-import {StrictMode} from "react";
+import {StrictMode, useState} from "react";
 import {Leva} from 'leva'
 import {Perf} from 'r3f-perf'
-
 
 createRoot(document.getElementById('root')).render(
     < StrictMode>
         <Leva collapsed={true}/>
         <Canvas
+            gl={(canvas) => {
+                const renderer = new WebGPURenderer({
+                    canvas: canvas,
+                    antialias: true,
+                    alpha: true,
+                    forceWebGL: false
+                })
+                renderer.toneMapping = ACESFilmicToneMapping
+                renderer.outputColorSpace = SRGBColorSpace
+            }}
             shadows
             camera={{
                 fov: 45,

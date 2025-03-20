@@ -1,5 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import {useControls} from 'leva'
+import FloorGrid from "./exchange/FloorGrid.jsx";
+
 
 
 export default function Game(){
@@ -38,5 +40,6 @@ export default function Game(){
             <planeGeometry />
             <meshStandardMaterial color="greenyellow" />
         </mesh>
+
     </>
 }
