@@ -1,6 +1,8 @@
 import {useControls} from "leva";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
+import {color, rangeFog, uniform, rangeFogFactor, fog} from "three/tsl";
 import MeshGridMaterial, {MeshGridMaterialLine} from "./MeshGridMaterial.js";
+
 
 export default function FloorGrid() {
     /**
@@ -12,16 +14,16 @@ export default function FloorGrid() {
         new MeshGridMaterialLine('#ffffff', 10, 0.002),
     ]
     const linesConfig = {}
-    for(let i = 0; i < lines.length; i++){
-            linesConfig["line " + (i + 1)] = {
-                scale: {value: lines[i].scale.value, min: 0, max: 10, step: 0.001},
-                thickness: {value: lines[i].thickness.value, min: 0, max: 1, step: 0.001},
-                offsetX: {value: lines[i].offset.value.x, min: 0, max: 1, step: 0.001},
-                offsetY: {value: lines[i].offset.value.y, min: 0, max: 1, step: 0.001},
-                cross: {value: lines[i].cross.value, min: 0, max: 1, step: 0.001},
-                color: {value: lines[i].color.value.getHexString(THREE.SRGBColorSpace)}
-            }
+    for (let i = 0; i < lines.length; i++) {
+        linesConfig["line " + (i + 1)] = {
+            scale: {value: lines[i].scale.value, min: 0, max: 10, step: 0.001},
+            thickness: {value: lines[i].thickness.value, min: 0, max: 1, step: 0.001},
+            offsetX: {value: lines[i].offset.value.x, min: 0, max: 1, step: 0.001},
+            offsetY: {value: lines[i].offset.value.y, min: 0, max: 1, step: 0.001},
+            cross: {value: lines[i].cross.value, min: 0, max: 1, step: 0.001},
+            color: {value: lines[i].color.value.getHexString(THREE.SRGBColorSpace)}
         }
+    }
 
     const {scale, antialiased} = useControls('grid', {
         scale: {value: 1, min: 0, max: 10, step: 0.001},
@@ -44,10 +46,10 @@ export default function FloorGrid() {
         new THREE.PlaneGeometry(100, 100),
         worldGridMaterial
     )
-    floor.rotation.x = - Math.PI * 0.5
-    floor.position.y = - 1
+    floor.rotation.x = -Math.PI * 0.5
+    floor.position.y = -1
 
     return (
-        <primitive object={floor} />
+        <primitive object={floor}/>
     )
 }

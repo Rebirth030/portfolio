@@ -38,4 +38,9 @@ export default defineConfig({
             emptyOutDir: true, // Empty the folder first
             sourcemap: true, // Add sourcemap
         },
+    optimizeDeps: {
+        esbuildOptions: {
+            target: "esnext",
+        },
+    },
 })

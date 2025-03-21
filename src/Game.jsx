@@ -4,6 +4,7 @@ import FloorGrid from "./exchange/FloorGrid.jsx";
 
 
 
+
 export default function Game(){
     const { position } = useControls({
         position: "top-left"
@@ -12,6 +13,8 @@ export default function Game(){
     return <>
         <OrbitControls makeDefault />
 
+
+        <FloorGrid />
         <directionalLight
             castShadow={true}
             position={ [ 4, 4, 1 ] }
@@ -34,11 +37,6 @@ export default function Game(){
         <mesh castShadow={true} position-x={ 2 } scale={ 1.5 }>
             <boxGeometry />
             <meshStandardMaterial color="mediumpurple" />
-        </mesh>
-
-        <mesh receiveShadow={true} position-y={ - 1 } rotation-x={ - Math.PI * 0.5 } scale={ 10 }>
-            <planeGeometry />
-            <meshStandardMaterial color="greenyellow" />
         </mesh>
 
     </>

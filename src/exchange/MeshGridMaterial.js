@@ -1,6 +1,8 @@
-import {Fn, If, mix, smoothstep, clamp, vec3, vec2, uniform, color} from "three/src/Three.TSL.js";
-import {NodeMaterial} from "three/src/materials/nodes/NodeMaterials.js";
+import {clamp, smoothstep, If, color, Fn, uniform, vec3, vec4, positionWorld, normalWorld, mix, vec2, uv} from "three/tsl";
+import {NodeMaterial} from "three/webgpu";
 import {Color} from "three";
+
+
 
 
 
@@ -11,7 +13,7 @@ const toMask = Fn(([ normal ]) =>
     const vecY = vec3(0, 1, 0).toVar()
     const vecZ = vec3(0, 0, 1).toVar()
 
-    const dotX = normal.dAt(vecX).abs()
+    const dotX = normal.dot(vecX).abs()
     const dotY = normal.dot(vecY).abs()
     const dotZ = normal.dot(vecZ).abs()
 
