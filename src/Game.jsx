@@ -1,43 +1,43 @@
-import { OrbitControls } from '@react-three/drei'
+import {Environment, OrbitControls} from '@react-three/drei'
 import {useControls} from 'leva'
 import FloorGrid from "./exchange/FloorGrid.jsx";
+import {Physics, RigidBody} from "@react-three/rapier";
+import Player from "./Player.jsx";
+import Ecctrl from "ecctrl";
 
 
-
-
-export default function Game(){
-    const { position } = useControls({
+export default function Game() {
+    const {position} = useControls("test",{
         position: "top-left"
     })
 
     return <>
-        <OrbitControls makeDefault />
+        <Physics
+            debug={true}
+            updateLoop={"independent"}
+            timestep="varying"
+
+        >
+            <OrbitControls makeDefault />
 
 
-        <FloorGrid />
-        <directionalLight
-            castShadow={true}
-            position={ [ 4, 4, 1 ] }
-            intensity={ 4.5 }
-            shadow-mapSize={ [ 1024, 1024 ] }
-            shadow-camera-near={ 1 }
-            shadow-camera-far={ 10 }
-            shadow-camera-top={ 10 }
-            shadow-camera-right={ 10 }
-            shadow-camera-bottom={ - 10 }
-            shadow-camera-left={ - 10 }
-        />
-        <ambientLight intensity={ 1.5 } />
 
-        <mesh castShadow={true} position-x={ - 2 }>
-            <sphereGeometry />
-            <meshStandardMaterial color="orange" />
-        </mesh>
+            <FloorGrid/>
+        <RigidBody >
+            <mesh
+                position={[0, 2, 0]}
+                rotation={[-Math.PI * 0.5, 0, 0]}
+                scale={[1, 1, 1]}
+            >
+                <boxGeometry />
+                <meshStandardMaterial />
+            </mesh>
+        </RigidBody>
 
-        <mesh castShadow={true} position-x={ 2 } scale={ 1.5 }>
-            <boxGeometry />
-            <meshStandardMaterial color="mediumpurple" />
-        </mesh>
 
+            <Player />
+
+        </Physics>
+        <Environment preset="studio" background />
     </>
 }

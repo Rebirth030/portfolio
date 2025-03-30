@@ -4,23 +4,32 @@ import * as THREE from 'three/webgpu'
 
 import {Canvas} from '@react-three/fiber'
 import Game from './Game'
-import {StrictMode,} from "react";
+import {StrictMode, Suspense,} from "react";
 import {Leva} from 'leva'
 import {Perf} from 'r3f-perf'
+import {KeyboardControls, StatsGl} from "@react-three/drei";
+
 
 createRoot(document.getElementById('root')).render(
-    <StrictMode>
-        <Leva collapsed={true}/>
-
+    <Suspense fallback={<div> Loading... </div>}>
+        <StrictMode >
+            <Leva/>
+            <KeyboardControls map={[
+                {name: 'forward', keys: ['ArrowUp', 'KeyW']},
+                {name: 'backward', keys: ['ArrowDown', 'KeyS']},
+                {name: 'leftward', keys: ['ArrowLeft', 'KeyA']},
+                {name: 'rightward', keys: ['ArrowRight', 'KeyD']},
+                {name: 'jump', keys: ['Space']},
+                {name: 'run', keys: ['Shift']},
+            ]}>
             <Canvas
-                gl={async (props) => {
-                    console.info("WebGPU is supported");
-                    const renderer = new THREE.WebGPURenderer(props);
+                gl={async (glProps) => {
+                    const renderer = new THREE.WebGPURenderer(glProps)
                     renderer.forceWebGL = false;
                     renderer.toneMapping = THREE.ACESFilmicToneMapping
                     renderer.outputColorSpace = THREE.SRGBColorSpace
-                    await renderer.init();
-                    return renderer;
+                    await renderer.init()
+                    return renderer
                 }}
                 shadows
                 camera={{
@@ -29,10 +38,13 @@ createRoot(document.getElementById('root')).render(
                     far: 200,
                     position: [2.5, 4, 6]
                 }}
-
             >
                 <Game/>
-            </Canvas>
+                <StatsGl
 
-    </StrictMode>
+                />
+            </Canvas>
+            </KeyboardControls>
+        </StrictMode>
+    </Suspense>
 )

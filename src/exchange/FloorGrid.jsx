@@ -2,6 +2,7 @@ import {useControls} from "leva";
 import * as THREE from "three/webgpu";
 import {color, rangeFog, uniform, rangeFogFactor, fog} from "three/tsl";
 import MeshGridMaterial, {MeshGridMaterialLine} from "./MeshGridMaterial.js";
+import {RigidBody} from "@react-three/rapier";
 
 
 export default function FloorGrid() {
@@ -42,14 +43,21 @@ export default function FloorGrid() {
     })
 
 
-    const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(100, 100),
-        worldGridMaterial
-    )
-    floor.rotation.x = -Math.PI * 0.5
-    floor.position.y = -1
+
+
+
 
     return (
-        <primitive object={floor}/>
+        <RigidBody
+            type={"fixed"}
+            rotation-x={-Math.PI * 0.5}
+            scale={[1, 1, 0.4]}
+            friction={1}
+        >
+            <mesh>
+                <boxGeometry args={[100, 100, 1]}/>
+                <primitive object={worldGridMaterial}/>
+            </mesh>
+        </RigidBody>
     )
 }
