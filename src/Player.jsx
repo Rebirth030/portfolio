@@ -4,7 +4,6 @@ import {useFrame} from "@react-three/fiber";
 import {useEffect, useRef, useState} from "react";
 import {useControls} from "leva";
 import * as THREE from "three"
-import Ecctrl, { EcctrlAnimation } from "ecctrl";
 
 
 export default function Player() {

@@ -22,28 +22,28 @@ createRoot(document.getElementById('root')).render(
                 {name: 'jump', keys: ['Space']},
                 {name: 'run', keys: ['Shift']},
             ]}>
-            <Canvas
-                gl={async (glProps) => {
-                    const renderer = new THREE.WebGPURenderer(glProps)
-                    renderer.forceWebGL = false;
-                    renderer.toneMapping = THREE.ACESFilmicToneMapping
-                    renderer.outputColorSpace = THREE.SRGBColorSpace
-                    await renderer.init()
-                    return renderer
-                }}
-                shadows
-                camera={{
-                    fov: 45,
-                    near: 0.1,
-                    far: 200,
-                    position: [2.5, 4, 6]
-                }}
-            >
-                <Game/>
-                <StatsGl
+                <Canvas
+                    gl={async (glProps) => {
+                        const renderer = new THREE.WebGPURenderer(glProps)
+                        renderer.forceWebGL = false;
+                        renderer.toneMapping = THREE.ACESFilmicToneMapping
+                        renderer.outputColorSpace = THREE.SRGBColorSpace
+                        await renderer.init()
+                        return renderer
+                    }}
+                    shadows
+                    camera={{
+                        fov: 45,
+                        near: 0.1,
+                        far: 200,
+                        position: [2.5, 4, 6]
+                    }}
+                >
+                    <Game/>
+                    <StatsGl
 
-                />
-            </Canvas>
+                    />
+                </Canvas>
             </KeyboardControls>
         </StrictMode>
     </Suspense>

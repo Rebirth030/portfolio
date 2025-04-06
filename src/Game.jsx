@@ -3,7 +3,7 @@ import {useControls} from 'leva'
 import FloorGrid from "./exchange/FloorGrid.jsx";
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
-import Ecctrl from "ecctrl";
+
 
 
 export default function Game() {
@@ -23,19 +23,21 @@ export default function Game() {
 
 
             <FloorGrid/>
-        <RigidBody >
-            <mesh
-                position={[0, 2, 0]}
-                rotation={[-Math.PI * 0.5, 0, 0]}
-                scale={[1, 1, 1]}
-            >
-                <boxGeometry />
-                <meshStandardMaterial />
-            </mesh>
-        </RigidBody>
+            <RigidBody >
+                <mesh
+                    position={[0, 5, 0]}
+                    rotation={[-Math.PI * 0.5, 0, 0]}
+                    scale={[1, 1, 1]}
+                >
+                    <boxGeometry />
+                    <meshStandardMaterial />
+                </mesh>
+            </RigidBody>
+
+            <Player/>
 
 
-            <Player />
+
 
         </Physics>
         <Environment preset="studio" background />
