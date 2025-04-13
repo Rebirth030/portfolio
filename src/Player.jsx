@@ -134,6 +134,7 @@ export default function Player() {
             rotation-y={Math.PI}
             scale={0.008}
             type={"dynamic"}
+            enabledRotations={[false, true, false]}
         >
             <primitive object={fox.scene}/>
         </RigidBody>

@@ -8,6 +8,7 @@ import {StrictMode, Suspense,} from "react";
 import {Leva} from 'leva'
 import {Perf} from 'r3f-perf'
 import {KeyboardControls, StatsGl} from "@react-three/drei";
+import {EcctrlJoystick} from "ecctrl";
 
 
 createRoot(document.getElementById('root')).render(
