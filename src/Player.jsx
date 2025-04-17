@@ -1,4 +1,4 @@
-import {RigidBody, useRapier} from "@react-three/rapier";
+import {CapsuleCollider, RigidBody, useRapier} from "@react-three/rapier";
 import {useGLTF, useKeyboardControls} from "@react-three/drei";
 import {useFrame} from "@react-three/fiber";
 import {useEffect, useRef, useState} from "react";
@@ -8,8 +8,8 @@ import * as THREE from "three"
 
 export default function Player() {
     const fox = useGLTF('./Fox/glTF/Fox.gltf')
-
     const body = useRef();
+
     const [subscribeKeys, getKeys] = useKeyboardControls()
     const {rapier, world} = useRapier()
     const [ smoothedCameraPosition ] = useState(() => new THREE.Vector3(10, 10, 10))
@@ -25,26 +25,26 @@ export default function Player() {
         jumpHeight,
         jumpTriggerHeight
     } = useControls("PlayerMovement", {
-            friction: {value:-0.5, min: -1, max: 1, step: 0.01},
-            restitution: {value: 0.0, min: 0, max: 1, step: 0.01},
-            linearDamping: {value: 1, min: 0, max: 5, step: 0.01},
-            angularDamping: {value: 1, min: 0, max: 5, step: 0.01},
-            walkImpulseStrength: {value: 0.5, min: 0, max: 5, step: 0.01},
-            jumpTriggerHeight: {value: 0.05, min: 0, max: 0.5, step: 0.01},
-            jumpHeight: {value: 0.6, min: 0, max: 1, step: 0.01}
-        }
-    )
+        friction: { value: 0.5, min: 0, max: 1, step: 0.01 },
+        restitution: { value: 0.1, min: 0, max: 1, step: 0.01 },
+        linearDamping: { value: 0.9, min: 0, max: 5, step: 0.01 },
+        angularDamping: { value: 0.9, min: 0, max: 5, step: 0.01 },
+        walkImpulseStrength: { value: 1.74, min: 0, max: 5, step: 0.01 },
+        jumpTriggerHeight: { value: 0.1, min: 0, max: 0.5, step: 0.01 },
+        jumpHeight: { value: 5, min: 0, max: 10, step: 0.1 }
+    });
 
 
     const jump = () => {
         const origin = body.current.translation();
-        origin.y -= 0.03
-        const ray = new rapier.Ray(origin, {x: 0, y: -1, z: 0}) //where the ray starts and in which direction
-        const hit = world.castRay(ray, 10, true)
-        if (hit.timeOfImpact < jumpTriggerHeight)
-            body.current.applyImpulse({x: 0.0, y: jumpHeight, z: 0.0}, false)
+        const ray = new rapier.Ray(origin, { x: 0, y: -1, z: 0 });
+        const hit = world.castRay(ray, 1, true);
 
-    }
+        if (hit && hit.toi < jumpTriggerHeight) {
+            body.current.applyImpulse({ x: 0, y: jumpHeight, z: 0 }, false);
+        }
+    };
+
 
 
     useEffect(() => {
@@ -71,31 +71,29 @@ export default function Player() {
         /**
          * Controls
          */
-        const {forward, backward, leftward, rightward, jump} = getKeys()
-        const impulse = {x: 0.0, y: 0, z: 0.0}
+        const { forward, backward, leftward, rightward } = getKeys();
+        const impulse = new THREE.Vector3();
 
-        const impulseStrength = walkImpulseStrength * delta
+        const impulseStrength = walkImpulseStrength * delta;
 
-        if (forward) {
-            impulse.z -= impulseStrength
-            body.current
-        }
-        if (backward) {
-            impulse.z += impulseStrength
-        }
-        if (rightward) {
-            impulse.x += impulseStrength
-        }
-        if (leftward) {
-            impulse.x -= impulseStrength
-        }
-        // Wenn in beiden Richtungen bewegt wird, normalisiere den Vektor:
-        if (impulse.x !== 0 && impulse.z !== 0) {
-            impulse.x /= Math.sqrt(2);
-            impulse.z /= Math.sqrt(2);
+        if (forward) impulse.z -= 1;
+        if (backward) impulse.z += 1;
+        if (leftward) impulse.x -= 1;
+        if (rightward) impulse.x += 1;
+
+        if (impulse.length() > 0) {
+            impulse.normalize().multiplyScalar(impulseStrength);
+            body.current.applyImpulse(impulse, true);
+
+            const currentRotation = body.current.rotation();
+            const targetAngle = Math.atan2(impulse.x, impulse.z);
+            const rotationSpeed = 5; // Adjust for desired smoothness
+
+            // Interpolate the Y-axis rotation
+            const newY = THREE.MathUtils.lerp(currentRotation.y, targetAngle, rotationSpeed * delta);
+            body.current.setRotation({ x: 0, y: newY, z: 0 }, true);
         }
 
-        body.current.applyImpulse(impulse, true)
 
 
 
@@ -103,40 +101,47 @@ export default function Player() {
          * Camera
          */
 
-        const bodyPosition = body.current.translation()
+        const bodyPosition = body.current.translation();
 
-        const cameraPosition = new THREE.Vector3()
-        cameraPosition.copy(bodyPosition)
-        cameraPosition.z += 2.9
-        cameraPosition.y += 1.8
+        const desiredCameraPosition = new THREE.Vector3(
+            bodyPosition.x,
+            bodyPosition.y + 2,
+            bodyPosition.z + 5
+        );
 
-        const cameraTarget = new THREE.Vector3()
-        cameraTarget.copy(bodyPosition)
-        cameraTarget.y += 0.25
+        smoothedCameraPosition.lerp(desiredCameraPosition, 5 * delta);
 
-        smoothedCameraPosition.lerp(cameraPosition, 5 * delta)
-        smoothedCameraTarget.lerp(cameraTarget, 5 * delta)
+        const cameraTarget = new THREE.Vector3(
+            bodyPosition.x,
+            bodyPosition.y + 1,
+            bodyPosition.z
+        );
 
-        state.camera.position.copy(smoothedCameraPosition)
-        state.camera.lookAt(smoothedCameraTarget)
+        smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
+
+        state.camera.position.copy(smoothedCameraPosition);
+        state.camera.lookAt(smoothedCameraTarget);
 
     })
 
     return (
         <RigidBody
             ref={body}
+            colliders={false} // Disable automatic collider generation
             canSleep={false}
-            position-y={1}
-            friction={friction}
-            restitution={restitution}
-            linearDamping={linearDamping}
-            angularDamping={angularDamping}
-            rotation-y={Math.PI}
+            position={[0, 1, 0]}
+            friction={0.5}
+            restitution={0.1}
+            linearDamping={0.9}
+            angularDamping={0.9}
+            rotation={[0, Math.PI, 0]}
             scale={0.008}
-            type={"dynamic"}
+            type="dynamic"
             enabledRotations={[false, true, false]}
         >
-            <primitive object={fox.scene}/>
+            {/* Define a capsule collider with halfHeight and radius */}
+            <CapsuleCollider args={[0.35, 0.3]} />
+            <primitive object={fox.scene} />
         </RigidBody>
-    )
+    );
 }

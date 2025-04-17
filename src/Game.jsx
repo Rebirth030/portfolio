@@ -3,43 +3,42 @@ import {useControls} from 'leva'
 import FloorGrid from "./exchange/FloorGrid.jsx";
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
-
+import {EcctrlJoystick} from "ecctrl";
+import GrasField from "./gras/InfiniteGras.jsx";
+import InfiniteGrass from "./gras/InfiniteGras.jsx";
 
 
 export default function Game() {
-    const {position} = useControls("test",{
-        position: "top-left"
-    })
+    return (
+        <>
+            <Physics
+                debug={true}
+                updateLoop={"independent"}
+                timestep="varying"
 
-    return <>
-        <Physics
-            debug={true}
-            updateLoop={"independent"}
-            timestep="varying"
-
-        >
-            <OrbitControls makeDefault />
+            >
+                <OrbitControls makeDefault />
 
 
+                <FloorGrid/>
+                <InfiniteGrass />
+                {/*<RigidBody>
+                    <mesh
+                        position={[0, 5, 0]}
+                        rotation={[-Math.PI * 0.5, 0, 0]}
+                        scale={[1, 1, 1]}
+                    >
+                        <boxGeometry/>
+                        <meshStandardMaterial/>
+                    </mesh>
+                </RigidBody>*/}
 
-            <FloorGrid/>
-            <RigidBody >
-                <mesh
-                    position={[0, 5, 0]}
-                    rotation={[-Math.PI * 0.5, 0, 0]}
-                    scale={[1, 1, 1]}
-                >
-                    <boxGeometry />
-                    <meshStandardMaterial />
-                </mesh>
-            </RigidBody>
-
-            <Player/>
-
-
+                <Player/>
 
 
-        </Physics>
-        <Environment preset="studio" background />
-    </>
+            </Physics>
+            <Environment preset="apartment" background/>
+
+        </>
+    )
 }

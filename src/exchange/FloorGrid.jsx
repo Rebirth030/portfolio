@@ -29,8 +29,6 @@ export default function FloorGrid() {
     const {scale, antialiased} = useControls('grid', {
         scale: {value: 1, min: 0, max: 10, step: 0.001},
         antialiased: {value: true},
-
-
     })
 
     const worldGridMaterial = new MeshGridMaterial({
@@ -55,7 +53,7 @@ export default function FloorGrid() {
             friction={1}
         >
             <mesh>
-                <boxGeometry args={[100, 100, 1]}/>
+                <boxGeometry args={[200, 200, 1]}/>
                 <primitive object={worldGridMaterial}/>
             </mesh>
         </RigidBody>

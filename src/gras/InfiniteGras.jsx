@@ -1,4 +1,4 @@
-import { color, attribute, add, mul, sub, mod, div, mix, clamp, uniform, vec3, normalize, negate, cross, dFdx, dFdy, texture } from 'three/tsl';
+import { color, attribute, add, mul, sub, mod, div, mix, clamp, uniform, vec3, normalize, negate, cross, dFdx, dFdy, texture, max} from 'three/tsl';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
@@ -17,9 +17,9 @@ export default function InfiniteGrass() {
         roughness,
         metalness
     } = useControls('Infinite Grass', {
-        gridSize: { value: 500, min: 10, max: 1000, step: 10 },
-        spacing: { value: 0.1, min: 0.01, max: 1.0, step: 0.01 },
-        bladeHeight: { value: 0.2, min: 0.05, max: 0.5, step: 0.01 },
+        gridSize: { value: 340, min: 10, max: 1000, step: 10 },
+        spacing: { value: 0.09, min: 0.01, max: 1.0, step: 0.01 },
+        bladeHeight: { value: 0.2, min: 0.05, max: 1, step: 0.01 },
         maxHeightVariation: { value: 0.05, min: 0, max: 0.2, step: 0.005 },
         topColorHex: { value: '#99ff66' },
         bottomColorHex: { value: '#336622' },
@@ -47,7 +47,7 @@ export default function InfiniteGrass() {
 
             const x = (i % gridSize) * spacing - halfSize + (Math.random() - 0.5) * spacing;
             const z = Math.floor(i / gridSize) * spacing - halfSize + (Math.random() - 0.5) * spacing;
-            const y = bladeHeight;
+            const y = 0.2;
 
             const heightVariation = (Math.random() * 2 - 1) * maxHeightVariation;
 
@@ -67,7 +67,7 @@ export default function InfiniteGrass() {
                     offsets[v * 3 + 2] = 0.0;
                 } else if (j === 2) {
                     offsets[v * 3 + 0] = 0.0;
-                    offsets[v * 3 + 1] = 0.2 + heightVariation;
+                    offsets[v * 3 + 1] = bladeHeight + heightVariation;
                     offsets[v * 3 + 2] = 0.0;
                 }
 
@@ -85,7 +85,7 @@ export default function InfiniteGrass() {
         geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
 
         return geometry;
-    }, [gridSize, spacing, bladeHeight]);
+    }, [gridSize, spacing, bladeHeight,maxHeightVariation]);
 
     // Access per-vertex data in TSL
     const centerNode = attribute('position');
@@ -101,9 +101,11 @@ export default function InfiniteGrass() {
         const cam = state.camera;
         if (!cam.position.equals(prevCamPos)) {
             cameraXZ.value.set(cam.position.x, 0, cam.position.z);
+            console.log(cameraXZ.value);
             prevCamPos.copy(cam.position);
         }
     });
+
 
     // Wrap blade center positions around the camera for infinite scrolling illusion
     const relative = sub(centerNode, cameraXZ);
@@ -111,21 +113,20 @@ export default function InfiniteGrass() {
     const wrappedZ = sub(mod(add(relative.z, halfSize), fieldSize), halfSize);
     const wrappedCenter = add(vec3(wrappedX, centerNode.y, wrappedZ), cameraXZ);
 
-    // Align each blade to face the camera (billboard-style)
-    const camToBlade = normalize(
-        sub(vec3(cameraXZ.x, 0.0, cameraXZ.z), vec3(wrappedCenter.x, 0.0, wrappedCenter.z))
-    );
-
-    const right = normalize(vec3(camToBlade.z, 0.0, negate(camToBlade.x)));
+    const camToBladeXZ = normalize(add(sub(cameraXZ, wrappedCenter), vec3(0.0001))); // safe
+    const right = normalize(vec3(camToBladeXZ.z, 0.0, negate(camToBladeXZ.x)));
     const up = vec3(0.0, 1.0, 0.0);
 
-    // Rotate offset by camera orientation
+    // only use x/y
     const rotatedOffset = add(
-        add(mul(right, vec3(offsetNode.x)), mul(up, vec3(offsetNode.y))),
-        mul(camToBlade, vec3(offsetNode.z))
+        mul(right, vec3(offsetNode.x)),
+        mul(up, vec3(offsetNode.y))
     );
 
     const finalPosition = add(wrappedCenter, rotatedOffset);
+
+
+
 
     // Calculate normals in the shader (for lighting/matcap)
     const normal = normalize(cross(dFdx(finalPosition), dFdy(finalPosition)));
@@ -151,8 +152,11 @@ export default function InfiniteGrass() {
     material.positionNode = finalPosition;
     material.colorNode = finalColor;
 
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false
+
     // Return the final mesh
     return (
-        <primitive object={new THREE.Mesh(geometry, material)} />
+        <primitive object={mesh} />
     );
 }
