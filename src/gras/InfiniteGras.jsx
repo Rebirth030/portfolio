@@ -45,7 +45,7 @@ export default function InfiniteGrass() {
         for (let i = 0; i < bladeCount; i++) {
             const halfSize = (gridSize - 1) * spacing * 0.5;
 
-            const x = (i % gridSize) * spacing - halfSize + (Math.random() - 0.5) * spacing;
+            const x = (i % gridSize) * spacing  + (Math.random() - 0.5) * spacing;
             const z = Math.floor(i / gridSize) * spacing - halfSize + (Math.random() - 0.5) * spacing;
             const y = 0.2;
 
@@ -101,7 +101,6 @@ export default function InfiniteGrass() {
         const cam = state.camera;
         if (!cam.position.equals(prevCamPos)) {
             cameraXZ.value.set(cam.position.x, 0, cam.position.z);
-            console.log(cameraXZ.value);
             prevCamPos.copy(cam.position);
         }
     });
@@ -113,7 +112,7 @@ export default function InfiniteGrass() {
     const wrappedZ = sub(mod(add(relative.z, halfSize), fieldSize), halfSize);
     const wrappedCenter = add(vec3(wrappedX, centerNode.y, wrappedZ), cameraXZ);
 
-    const camToBladeXZ = normalize(add(sub(cameraXZ, wrappedCenter), vec3(0.0001))); // safe
+    const camToBladeXZ = normalize(add(sub(cameraXZ, wrappedCenter), vec3(0.0001)));
     const right = normalize(vec3(camToBladeXZ.z, 0.0, negate(camToBladeXZ.x)));
     const up = vec3(0.0, 1.0, 0.0);
 

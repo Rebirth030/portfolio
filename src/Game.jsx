@@ -3,8 +3,6 @@ import {useControls} from 'leva'
 import FloorGrid from "./exchange/FloorGrid.jsx";
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
-import {EcctrlJoystick} from "ecctrl";
-import GrasField from "./gras/InfiniteGras.jsx";
 import InfiniteGrass from "./gras/InfiniteGras.jsx";
 
 
@@ -13,27 +11,26 @@ export default function Game() {
         <>
             <Physics
                 debug={true}
-                updateLoop={"independent"}
-                timestep="varying"
+                updateLoop={"follow"}
+                timestep="fixed"
 
             >
-                <OrbitControls makeDefault />
 
 
                 <FloorGrid/>
-                <InfiniteGrass />
-                {/*<RigidBody>
-                    <mesh
-                        position={[0, 5, 0]}
-                        rotation={[-Math.PI * 0.5, 0, 0]}
-                        scale={[1, 1, 1]}
-                    >
-                        <boxGeometry/>
-                        <meshStandardMaterial/>
-                    </mesh>
-                </RigidBody>*/}
+                <RigidBody >
+                <mesh
+                    position={[0, 5, 2]}
+                    rotation={[-Math.PI * 0.5, 0, 0]}
+                    scale={0.7988585829734802}
+                >
+                    <boxGeometry />
+                    <meshStandardMaterial />
+                </mesh>
+            </RigidBody>
 
                 <Player/>
+                <InfiniteGrass/>
 
 
             </Physics>
