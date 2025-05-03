@@ -4,15 +4,14 @@ import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useControls, folder } from "leva"; // Import folder
 import * as THREE from "three";
+import { forwardRef } from 'react';
 
 
 const UP_VECTOR = new THREE.Vector3(0, 1, 0);
 const DOWN_VECTOR = new THREE.Vector3(0, -1, 0);
 
 
-export default function Player() {
-
-    const body = useRef();
+const Player = forwardRef((props, ref) => {
     const meshRef = useRef();
     const [subscribeKeys, getKeys] = useKeyboardControls();
     const { rapier, world } = useRapier();
@@ -33,40 +32,41 @@ export default function Player() {
         // Jumping (existing + new)
         jumpHeight, jumpTriggerHeight, groundCheckDistance,
         // Camera Follow (new)
-        cameraOffsetY, cameraOffsetZ, cameraTargetOffsetY, cameraLerpFactor,
+        cameraOffsetY, cameraOffsetZ, cameraTargetOffsetY, cameraLerpFactor, cameraFollowing,
     } = useControls("Player Settings", {
         Physics: folder({
              friction: { value: 0.5, min: 0, max: 1, step: 0.01 },
              restitution: { value: 0.1, min: 0, max: 1, step: 0.01 },
              linearDamping: { value: 0.9, min: 0, max: 5, step: 0.01 },
              angularDamping: { value: 0.9, min: 0, max: 5, step: 0.01 },
-        }),
+        }, {collapsed: true}),
         Collider: folder({
             // Default to current hardcoded values
             capsuleHalfHeight: { value: 0.3, min: 0.1, max: 1, step: 0.01 },
             capsuleRadius: { value: 0.3, min: 0.1, max: 1, step: 0.01 },
-        }),
+        }, {collapsed: true}),
         Movement: folder({
              walkImpulseStrength: { value: 3.5, min: 0, max: 10, step: 0.1 },
              runMultiplier: { value: 1.40, min: 1, max: 5, step: 0.01 },
              airControlMultiplier: { value: 0.2, min: 0, max: 1, step: 0.01 },
              rotationSpeed: { value: 15, min: 1, max: 30, step: 1 },
-        }),
+        }, {collapsed: true}),
         Jumping: folder({
             jumpHeight: { value: 1.5, min: 0, max: 10, step: 0.1 },
             // How close to ground to *initiate* jump
             jumpTriggerHeight: { value: 0.1, min: 0.01, max: 0.5, step: 0.01 },
             // How far to check down for ground status in general
             groundCheckDistance: { value: 0.15, min: 0.01, max: 0.5, step: 0.01 },
-        }),
+        }, {collapsed: true}),
         Camera: folder({
             // Defaults based on previous hardcoded values
+            cameraFollowing: { value: true },
             cameraOffsetY: { value: 3.9, min: 0, max: 5, step: 0.1 },
             cameraOffsetZ: { value: 4.0, min: 1, max: 10, step: 0.1 },
             cameraTargetOffsetY: { value: 0.3, min: 0, max: 5, step: 0.1 },
             cameraLerpFactor: { value: 5.0, min: 1, max: 20, step: 0.1 },
-        }),
-    });
+        }, {collapsed: true}),
+    }, {collapsed: true});
 
     // --- Camera State ---
     const smoothedCameraPosition = useMemo(() => new THREE.Vector3(10, 10, 10), []);
@@ -90,7 +90,7 @@ export default function Player() {
         const ray = new rapier.Ray(_rayOrigin, DOWN_VECTOR);
         const maxToi = distance + capsuleRadius; // Check from sphere surface down
         const solid = true;
-        const colliderToExclude = rigidBody.collider(0); // Get the body's collider
+        const colliderToExclude = rigidBody.collider(0); // Get the ref's collider
 
         const hit = rapierWorld.castRay(
             ray, maxToi, solid,
@@ -105,7 +105,7 @@ export default function Player() {
 
     // --- Jump Action ---
     const jump = () => {
-        const rigidBody = body.current;
+        const rigidBody = ref.current;
         if (!rigidBody) return;
 
         // Check if grounded before jumping using the specific jumpTriggerHeight
@@ -124,7 +124,7 @@ export default function Player() {
 
 
     useFrame((state, delta) => {
-        const bodyApi = body.current;
+        const bodyApi = ref.current;
         const mesh = meshRef.current;
 
         if (!bodyApi || !mesh || !rapierWorld) return;
@@ -162,33 +162,34 @@ export default function Player() {
              mesh.quaternion.rotateTowards(_rotateQuat, delta * rotationSpeed);
         }
 
+        if (cameraFollowing) {
+            const bodyPosition = bodyApi.translation();
+            _cameraPosition.set(
+                bodyPosition.x,
+                bodyPosition.y + cameraOffsetY,
+                bodyPosition.z + cameraOffsetZ
+            );
+            _cameraTarget.set(
+                bodyPosition.x,
+                bodyPosition.y + cameraTargetOffsetY,
+                bodyPosition.z
+            );
 
-        const bodyPosition = bodyApi.translation();
-        _cameraPosition.set(
-            bodyPosition.x,
-            bodyPosition.y + cameraOffsetY,
-            bodyPosition.z + cameraOffsetZ
-        );
-        _cameraTarget.set(
-            bodyPosition.x,
-            bodyPosition.y + cameraTargetOffsetY,
-            bodyPosition.z
-        );
+            smoothedCameraPosition.lerp(_cameraPosition, cameraLerpFactor * delta);
+            smoothedCameraTarget.lerp(_cameraTarget, cameraLerpFactor * delta);
 
-        smoothedCameraPosition.lerp(_cameraPosition, cameraLerpFactor * delta);
-        smoothedCameraTarget.lerp(_cameraTarget, cameraLerpFactor * delta);
-
-        state.camera.position.copy(smoothedCameraPosition);
-        state.camera.lookAt(smoothedCameraTarget);
+            state.camera.position.copy(smoothedCameraPosition);
+            state.camera.lookAt(smoothedCameraTarget);
+        }
     });
 
 
     return (
         <RigidBody
-            ref={body}
+            ref={ref}
             colliders={false}
             canSleep={false}
-            position={[0, 1, 0]}
+            position={[0, 2, 0]}
             friction={friction}
             restitution={restitution}
             linearDamping={linearDamping}
@@ -208,4 +209,6 @@ export default function Player() {
             />
         </RigidBody>
     );
-}
+});
+
+export default Player;

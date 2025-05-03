@@ -4,9 +4,11 @@ import FloorGrid from "./exchange/FloorGrid.jsx";
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
 import InfiniteGrass from "./gras/InfiniteGras.jsx";
+import {useRef} from "react";
 
 
 export default function Game() {
+    const playerRef = useRef();
     return (
         <>
             <Physics
@@ -16,7 +18,7 @@ export default function Game() {
 
             >
 
-
+                <OrbitControls/>
                 <FloorGrid/>
                 <RigidBody >
                 <mesh
@@ -29,8 +31,8 @@ export default function Game() {
                 </mesh>
             </RigidBody>
 
-                <Player/>
-                <InfiniteGrass/>
+                <Player ref={playerRef}/>
+                <InfiniteGrass playerRef={playerRef}/>
 
 
             </Physics>

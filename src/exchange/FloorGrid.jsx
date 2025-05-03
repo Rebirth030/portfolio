@@ -29,7 +29,7 @@ export default function FloorGrid() {
     const {scale, antialiased} = useControls('grid', {
         scale: {value: 1, min: 0, max: 10, step: 0.001},
         antialiased: {value: true},
-    })
+    }, {collapsed: true})
 
     const worldGridMaterial = new MeshGridMaterial({
         color: '#19191f',
