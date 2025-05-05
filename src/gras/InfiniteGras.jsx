@@ -1,57 +1,85 @@
-import { color, attribute, add, mul, sub, mod, div, mix, clamp, uniform, vec2, vec3, normalize, negate, cross, dFdx, dFdy, texture, max, positionWorld, Fn, time } from 'three/tsl'; // Added Fn and time
-import { useMemo } from 'react';
+import {
+    Var,
+    matcapUV,
+    uv,
+    If,
+    color,
+    attribute,
+    add,
+    mul,
+    sub,
+    mod,
+    div,
+    mix,
+    clamp,
+    uniform,
+    vec2,
+    vec3,
+    normalize,
+    negate,
+    cross,
+    dFdx,
+    dFdy,
+    texture,
+    max,
+    positionWorld,
+    positionLocal,
+    Fn,
+    time
+} from 'three/tsl'; // Added Fn and time
+import {useMemo} from 'react';
 import * as THREE from 'three';
-import { MeshStandardNodeMaterial } from 'three/webgpu';
-import { useFrame, useLoader } from '@react-three/fiber';
-import { Vector3 } from 'three';
+import {MeshStandardNodeMaterial} from 'three/webgpu';
+import {useFrame, useLoader} from '@react-three/fiber';
+import {Vector3} from 'three';
 import {folder, useControls} from "leva";
+import {cameraPosition} from "three/src/Three.TSL.js";
 
-// Updated windFn to accept uniforms
+
 const windFn = Fn(
-    ([noiseTex, worldPos, uTime, uDirection, uSpeed, uScale1, uScale2]) => {
-        // uDirection should be normalized when passed in
+    ([noiseTex, worldPos, direction, speed, scale1, scale2, timeOffsetScale, timeOffsetStrength]) => {
 
-        // first noise sample
-        const noiseUV1 = add(worldPos.xy.mul(uScale1), uDirection.mul(uTime.mul(uSpeed)));
-        const noise1   = sub(texture(noiseTex, noiseUV1).r, 0.5); // Assuming noise texture values are 0-1
+        const timeOffsetNoise = texture(noiseTex, worldPos.xy.mul(0.0001)).r
 
-        // second noise sample (using a fraction of the speed for variation)
-        const noiseUV2 = add(worldPos.xy.mul(uScale2), uDirection.mul(uTime.mul(uSpeed * 0.3)));
-        const noise2   = texture(noiseTex, noiseUV2).r;
+        const noiseUV1 = worldPos.xy.mul(0.06).add(add(direction.mul(time.mul(0.1)), timeOffsetNoise.mul(4))).xy
+        const noise1 = texture(noiseTex, noiseUV1).r.sub(0.5)
 
-        // combined intensity
-        const intensity = noise1.mul(noise2);
 
-        // return a 2D offset, scaled by overall speed for more impact
-        // Adjust the '5.0' multiplier to control overall wind strength sensitivity to speed
-        return uDirection.mul(intensity * uSpeed * 5.0);
+        const noiseUV2 = worldPos.xy.mul(0.043).add(direction.mul(time.mul(0.1 * 0.3))).xy
+        const noise2 = texture(noiseTex, noiseUV2).r
+
+
+        const intensity = noise1.mul(noise2)
+
+        return direction.mul(intensity)
     }
 );
 
-export default function InfiniteGrass({ playerRef }) {
+
+export default function InfiniteGrass({playerRef}) {
     // --- Existing Infinite Grass Controls ---
     const {
         gridSize, spacing, bladeHeight, maxHeightVariation, topColorHex, bottomColorHex, roughness, metalness,
         windSpeed, windScale1, windScale2, windDirectionX, windDirectionZ
     } = useControls('Infinite Grass', {
         Gras: folder({
-            gridSize: { value: 340, min: 10, max: 1000, step: 10 },
-            spacing: { value: 0.09, min: 0.01, max: 1.0, step: 0.01 },
-            bladeHeight: { value: 0.2, min: 0.05, max: 1, step: 0.01 },
-            maxHeightVariation: { value: 0.05, min: 0, max: 0.2, step: 0.005 },
-            topColorHex: { value: '#99ff66' },
-            bottomColorHex: { value: '#336622' },
-            roughness: { value: 1.0, min: 0, max: 1, step: 0.01 },
-            metalness: { value: 0.0, min: 0, max: 1, step: 0.01 },
+            gridSize: {value: 340, min: 10, max: 1000, step: 10},
+            spacing: {value: 0.09, min: 0.01, max: 1.0, step: 0.01},
+            bladeHeight: {value: 0.2, min: 0.05, max: 1, step: 0.01},
+            maxHeightVariation: {value: 0.05, min: 0, max: 0.2, step: 0.005},
+            topColorHex: {value: '#99ff66'},
+            bottomColorHex: {value: '#336622'},
+            roughness: {value: 1.0, min: 0, max: 1, step: 0.01},
+            metalness: {value: 0.0, min: 0, max: 1, step: 0.01},
         }, {collapsed: true}),
         Wind: folder({
-            windSpeed: { value: 0.1, min: 0, max: 1, step: 0.01 },
-            windScale1: { value: 0.06, min: 0.01, max: 0.2, step: 0.005 },
-            windScale2: { value: 0.043, min: 0.01, max: 0.2, step: 0.005 },
-            windDirectionX: { value: -1.0, min: -1.0, max: 1.0, step: 0.1 },
-            windDirectionZ: { value: 1.0, min: -1.0, max: 1.0, step: 0.1 },
+            windSpeed: {value: 0.1, min: 0, max: 1, step: 0.01},
+            windScale1: {value: 0.06, min: 0.01, max: 0.2, step: 0.005},
+            windScale2: {value: 0.043, min: 0.01, max: 0.2, step: 0.005},
+            windDirectionX: {value: -1.0, min: -1.0, max: 1.0, step: 0.1},
+            windDirectionZ: {value: 1.0, min: -1.0, max: 1.0, step: 0.1},
         }, {collapsed: true}),
-    }, { collapsed: true });
+    }, {collapsed: true});
 
     // Load matcap and noise textures
     const matcapTexture = useLoader(THREE.TextureLoader, './matcap-grass2.png');
@@ -123,43 +151,32 @@ export default function InfiniteGrass({ playerRef }) {
     // Access per-vertex data in TSL
     const centerNode = attribute('position');
     const offsetNode = attribute('offset');
-    const cameraXZ = uniform(new THREE.Vector3()); // camera position (XZ plane only)
+    //const cameraXZ = uniform(new THREE.Vector3()); // camera position (XZ plane only)
     const playerXZ = uniform(new THREE.Vector3());
     const noiseTexNode = uniform(noiseTex);
+    const uvNode = uv()
+
 
     const worldPos = positionWorld;
 
-    const prevCamPos = new Vector3();
+
     const fieldSize = gridSize * spacing;
     const halfSize = fieldSize * 0.5;
 
-    // Uniforms for wind
-    const uTime = uniform(0);
-    const uDirection = uniform(new THREE.Vector2(windDirectionX, windDirectionZ).normalize()); // Normalized direction
-    const uSpeed = uniform(windSpeed);
-    const uScale1 = uniform(windScale1);
-    const uScale2 = uniform(windScale2);
+    const direction = new THREE.Vector2(windDirectionX, windDirectionZ).normalize();
 
     // Update cameraXZ every frame (if changed)
     useFrame((state) => {
-        const cam = state.camera;
+        /*const cam = state.camera;
         if (!cam.position.equals(prevCamPos)) {
             cameraXZ.value.set(cam.position.x, 0, cam.position.z);
             prevCamPos.copy(cam.position);
-        }
+        }*/
 
         if (playerRef.current) {
             const pos = playerRef.current.translation(); // Get position directly
             playerXZ.value.set(pos.x, 0, pos.z);
         }
-
-
-        // Update time for wind animation
-        uTime.value = state.clock.getElapsedTime();
-        uDirection.value.set(windDirectionX, windDirectionZ).normalize(); // Normalize direction on update
-        uSpeed.value = windSpeed; // Update the uniform's value each frame
-        uScale1.value = windScale1; // Update scale 1 value each frame
-        uScale2.value = windScale2; // Update scale 2 value each frame
     });
 
     // Wrap blade center positions around the camera for infinite scrolling illusion
@@ -168,7 +185,7 @@ export default function InfiniteGrass({ playerRef }) {
     const wrappedZ = sub(mod(add(relative.z, halfSize), fieldSize), halfSize);
     const wrappedCenter = add(vec3(wrappedX, centerNode.y, wrappedZ), playerXZ);
 
-    const camToBladeXZ = normalize(add(sub(cameraXZ, wrappedCenter), vec3(0.0001)));
+    const camToBladeXZ = normalize(add(sub(cameraPosition, wrappedCenter), vec3(0.0001)));
     const right = normalize(vec3(camToBladeXZ.z, 0.0, negate(camToBladeXZ.x)));
     const up = vec3(0.0, 1.0, 0.0);
 
@@ -178,21 +195,15 @@ export default function InfiniteGrass({ playerRef }) {
         mul(up, vec3(offsetNode.y))
     );
 
-    //Sample wind function
-    const windOffset = windFn([noiseTexNode, worldPos, uTime, uDirection, uSpeed, uScale1, uScale2]);
-
-    const finalPosition = add(wrappedCenter, rotatedOffset);
-
-    // Calculate normals in the shader (for lighting/matcap)
-    const normal = normalize(cross(dFdx(finalPosition), dFdy(finalPosition)));
-
-    // Use matcap UV trick to simulate shading
-    const viewNormal = normalize(normal);
-    const matcapUV = add(mul(viewNormal.xy, 0.5), vec3(0.5, 0.5, 0.0));
-    const matcapColor = texture(matcapTexture, matcapUV.xy);
-
-    // Create a gradient color from bottom (dark) to tip (light) using local offset
     const localHeight = clamp(div(offsetNode.y, 0.25), 0.0, 1.0);
+
+    const windOffset = windFn([noiseTex, worldPos, direction, windSpeed, windScale1, windScale2]).mul(localHeight);
+
+    const finalPosition = add(add(wrappedCenter, rotatedOffset), vec3(windOffset.x, 0.0, windOffset.y));
+
+    const matcapColor = texture(matcapTexture, matcapUV);
+
+
     const topColor = vec3(...new THREE.Color(topColorHex).convertSRGBToLinear().toArray());
     const bottomColor = vec3(...new THREE.Color(bottomColorHex).convertSRGBToLinear().toArray());
     const gradientColor = mix(bottomColor, topColor, localHeight);
@@ -212,6 +223,6 @@ export default function InfiniteGrass({ playerRef }) {
 
     // Return the final mesh
     return (
-        <primitive object={mesh} />
+        <primitive object={mesh}/>
     );
 }

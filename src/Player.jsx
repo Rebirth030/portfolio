@@ -189,7 +189,7 @@ const Player = forwardRef((props, ref) => {
             ref={ref}
             colliders={false}
             canSleep={false}
-            position={[0, 2, 0]}
+            position={[0, 3, 0]}
             friction={friction}
             restitution={restitution}
             linearDamping={linearDamping}
