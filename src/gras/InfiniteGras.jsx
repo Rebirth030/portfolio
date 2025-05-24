@@ -1,228 +1,158 @@
-import {
-    Var,
-    matcapUV,
-    uv,
-    If,
-    color,
-    attribute,
-    add,
-    mul,
-    sub,
-    mod,
-    div,
-    mix,
-    clamp,
-    uniform,
-    vec2,
-    vec3,
-    normalize,
-    negate,
-    cross,
-    dFdx,
-    dFdy,
-    texture,
-    max,
-    positionWorld,
-    positionLocal,
-    Fn,
-    time
-} from 'three/tsl'; // Added Fn and time
-import {useMemo} from 'react';
+import { cameraPosition, matcapUV, attribute, add, mul, sub, mod, div, mix, clamp, uniform, vec2, vec3, normalize, negate, cross, dFdx, dFdy, texture, positionWorld, Fn, time } from 'three/tsl';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import {MeshStandardNodeMaterial} from 'three/webgpu';
-import {useFrame, useLoader} from '@react-three/fiber';
-import {Vector3} from 'three';
-import {folder, useControls} from "leva";
-import {cameraPosition} from "three/src/Three.TSL.js";
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { useFrame, useLoader } from '@react-three/fiber';
+import { folder, useControls } from 'leva';
 
+// windFn: layered noise-based 2D wind generator
+const windFn = Fn(([spatialVariation, noiseTex, worldPos, direction, speed, scale1, scale2]) => {
+    const uv1 = worldPos.xz.mul(scale1).add(direction.mul(time.mul(speed))).add(spatialVariation.mul(4));
+    const n1 = texture(noiseTex, uv1).r.sub(0.5);
+    const uv2 = worldPos.xz.mul(scale2).add(direction.mul(time.mul(speed.mul(0.3))));
+    const n2 = texture(noiseTex, uv2).r;
+    return direction.mul(n1.mul(n2));
+});
 
-const windFn = Fn(
-    ([noiseTex, worldPos, direction, speed, scale1, scale2, timeOffsetScale, timeOffsetStrength]) => {
-
-        const timeOffsetNoise = texture(noiseTex, worldPos.xy.mul(0.0001)).r
-
-        const noiseUV1 = worldPos.xy.mul(0.06).add(add(direction.mul(time.mul(0.1)), timeOffsetNoise.mul(4))).xy
-        const noise1 = texture(noiseTex, noiseUV1).r.sub(0.5)
-
-
-        const noiseUV2 = worldPos.xy.mul(0.043).add(direction.mul(time.mul(0.1 * 0.3))).xy
-        const noise2 = texture(noiseTex, noiseUV2).r
-
-
-        const intensity = noise1.mul(noise2)
-
-        return direction.mul(intensity)
-    }
-);
-
-
-export default function InfiniteGrass({playerRef}) {
-    // --- Existing Infinite Grass Controls ---
-    const {
-        gridSize, spacing, bladeHeight, maxHeightVariation, topColorHex, bottomColorHex, roughness, metalness,
-        windSpeed, windScale1, windScale2, windDirectionX, windDirectionZ
-    } = useControls('Infinite Grass', {
+export default function InfiniteGrass({ playerRef }) {
+    // UI controls for grass and wind parameters
+    const { gridSize, spacing, bladeHeight, maxHeightVariation, topColorHex, bottomColorHex, roughness, metalness, gridOffsetZ, scaleX, scaleZ,
+        windSpeed, windScale1, windScale2, windDirectionX, windDirectionZ } = useControls('Infinite Grass', {
         Gras: folder({
-            gridSize: {value: 340, min: 10, max: 1000, step: 10},
-            spacing: {value: 0.09, min: 0.01, max: 1.0, step: 0.01},
-            bladeHeight: {value: 0.2, min: 0.05, max: 1, step: 0.01},
-            maxHeightVariation: {value: 0.05, min: 0, max: 0.2, step: 0.005},
-            topColorHex: {value: '#99ff66'},
-            bottomColorHex: {value: '#336622'},
-            roughness: {value: 1.0, min: 0, max: 1, step: 0.01},
-            metalness: {value: 0.0, min: 0, max: 1, step: 0.01},
-        }, {collapsed: true}),
+            gridSize: { value: 280, min: 10, max: 1000, step: 10 },
+            gridOffsetZ: { value: -5, min: -15, max: 0, step: 1 },  // X offset of grid center
+            scaleX: { value: 1.5, min: 0.1, max: 10, step: 0.1 },       // Scale grid spacing on X
+            scaleZ: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
+            spacing:  { value: 0.11, min: 0.01, max: 1, step: 0.01 },
+            bladeHeight: { value: 0.42, min: 0.05, max: 1, step: 0.01 },
+            maxHeightVariation: { value: 0.11, min: 0, max: 0.2, step: 0.005 },
+            topColorHex:    { value: '#99ff66' },
+            bottomColorHex: { value: '#336622' },
+            roughness: { value: 1.0, min: 0, max: 1, step: 0.01 },
+            metalness: { value: 0.0, min: 0, max: 1, step: 0.01 }
+        }, { collapsed: true }),
         Wind: folder({
-            windSpeed: {value: 0.1, min: 0, max: 1, step: 0.01},
-            windScale1: {value: 0.06, min: 0.01, max: 0.2, step: 0.005},
-            windScale2: {value: 0.043, min: 0.01, max: 0.2, step: 0.005},
-            windDirectionX: {value: -1.0, min: -1.0, max: 1.0, step: 0.1},
-            windDirectionZ: {value: 1.0, min: -1.0, max: 1.0, step: 0.1},
-        }, {collapsed: true}),
-    }, {collapsed: true});
+            windSpeed:  { value: 0.1, min: 0, max: 1, step: 0.01 },
+            windScale1: { value: 0.06, min: 0.01, max: 0.2, step: 0.005 },
+            windScale2: { value: 0.043, min: 0.01, max: 0.2, step: 0.005 },
+            windDirectionX: { value: -1.0, min: -1, max: 1, step: 0.1 },
+            windDirectionZ: { value:  1.0, min: -1, max: 1, step: 0.1 }
+        }, { collapsed: true })
+    }, { collapsed: true });
 
-    // Load matcap and noise textures
+    // load textures and set up wrapping for noise
     const matcapTexture = useLoader(THREE.TextureLoader, './matcap-grass2.png');
     const noiseTex = useLoader(THREE.TextureLoader, './noiseTexture.png');
-
     matcapTexture.colorSpace = THREE.SRGBColorSpace;
-
-    // --- Set Noise Texture Wrapping ---
     noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
 
-    // Generate procedural blade geometry (Unchanged)
+    // procedural blade geometry: positions, offsets, normals
+    const gridCountX = Math.max(1, Math.round(gridSize * scaleX));
+    const gridCountZ = Math.max(1, Math.round(gridSize * scaleZ));
+
     const geometry = useMemo(() => {
-        // ... (your existing geometry generation logic) ...
-        const bladeCount = gridSize * gridSize;
-        const vertexCount = bladeCount * 3;
+        const count = gridCountX * gridCountZ * 3;
+        const centers = new Float32Array(count * 3);
+        const offsets = new Float32Array(count * 3);
+        const normals = new Float32Array(count * 3);
 
-        const centers = new Float32Array(vertexCount * 3); // per-vertex center
-        const offsets = new Float32Array(vertexCount * 3); // local shape of blade
-        const normals = new Float32Array(vertexCount * 3); // upward normals
+        const halfX = (gridCountX - 1) * spacing * 0.5;
+        const halfZ = (gridCountZ - 1) * spacing * 0.5;
 
-        let v = 0;
+        let i = 0;
+        for (let ix = 0; ix < gridCountX; ix++) {
+            for (let iz = 0; iz < gridCountZ; iz++) {
+                // Position des Stiels plus leichte Zufallsverschiebung
+                const x = ix * spacing - halfX + (Math.random() - 0.5) * spacing;
+                const z = iz * spacing - halfZ + (Math.random() - 0.5) * spacing;
+                const baseY    = 0.2;
+                const variation = (Math.random() * 2 - 1) * maxHeightVariation;
 
-        for (let i = 0; i < bladeCount; i++) {
-            const halfSize = (gridSize - 1) * spacing * 0.5;
+                // 3 Vertices pro Grashalm (links, rechts, oben)
+                for (let v = 0; v < 3; v++) {
+                    // center-Position
+                    centers.set([x, baseY, z], i * 3);
 
-            const x = (i % gridSize) * spacing + (Math.random() - 0.5) * spacing;
-            const z = Math.floor(i / gridSize) * spacing - halfSize + (Math.random() - 0.5) * spacing;
-            const y = 0.2; // Base of the blade at y=0
+                    // offsets: v=0 linker Fuß, v=1 rechter Fuß, v=2 Spitze
+                    if (v < 2) {
+                        offsets.set([ (v * 2 - 1) * 0.05, 0, 0 ], i * 3);
+                    } else {
+                        offsets.set([ 0, bladeHeight + variation, 0 ], i * 3);
+                    }
 
-            const heightVariation = (Math.random() * 2 - 1) * maxHeightVariation;
-            const currentBladeHeight = bladeHeight + heightVariation;
+                    // nach oben ausgerichtete Normalen
+                    normals.set([0, 1, 0], i * 3);
 
-            // Create 3 vertices per blade (a vertical triangle)
-            for (let j = 0; j < 3; j++) {
-                centers[v * 3 + 0] = x;
-                centers[v * 3 + 1] = y; // Store base position y=0 here
-                centers[v * 3 + 2] = z;
-
-                if (j === 0) {
-                    offsets[v * 3 + 0] = -0.05;
-                    offsets[v * 3 + 1] = 0.0;
-                    offsets[v * 3 + 2] = 0.0;
-                } else if (j === 1) {
-                    offsets[v * 3 + 0] = 0.05;
-                    offsets[v * 3 + 1] = 0.0;
-                    offsets[v * 3 + 2] = 0.0;
-                } else if (j === 2) {
-                    offsets[v * 3 + 0] = 0.0;
-                    offsets[v * 3 + 1] = bladeHeight + heightVariation;
-                    offsets[v * 3 + 2] = 0.0;
+                    i++;
                 }
-
-                normals[v * 3 + 0] = 0;
-                normals[v * 3 + 1] = 1;
-                normals[v * 3 + 2] = 0;
-
-                v++;
             }
         }
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(centers, 3));
+        g.setAttribute('offset',   new THREE.BufferAttribute(offsets, 3));
+        g.setAttribute('normal',   new THREE.BufferAttribute(normals, 3));
+        return g;
+    }, [gridSize, spacing, bladeHeight, maxHeightVariation, scaleX, scaleZ]);
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(centers, 3));
-        geometry.setAttribute('offset', new THREE.BufferAttribute(offsets, 3));
-        geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-
-        return geometry;
-    }, [gridSize, spacing, bladeHeight, maxHeightVariation]);
-
-    // Access per-vertex data in TSL
+    // shader inputs: per-vertex and uniforms
     const centerNode = attribute('position');
     const offsetNode = attribute('offset');
-    //const cameraXZ = uniform(new THREE.Vector3()); // camera position (XZ plane only)
     const playerXZ = uniform(new THREE.Vector3());
-    const noiseTexNode = uniform(noiseTex);
-    const uvNode = uv()
-
-
     const worldPos = positionWorld;
 
-
-    const fieldSize = gridSize * spacing;
-    const halfSize = fieldSize * 0.5;
-
-    const direction = new THREE.Vector2(windDirectionX, windDirectionZ).normalize();
-
-    // Update cameraXZ every frame (if changed)
-    useFrame((state) => {
-        /*const cam = state.camera;
-        if (!cam.position.equals(prevCamPos)) {
-            cameraXZ.value.set(cam.position.x, 0, cam.position.z);
-            prevCamPos.copy(cam.position);
-        }*/
-
-        if (playerRef.current) {
-            const pos = playerRef.current.translation(); // Get position directly
-            playerXZ.value.set(pos.x, 0, pos.z);
-        }
+    // update player position uniform each frame
+    useFrame(() => {
+        const p = playerRef.current?.translation();
+        if (p) playerXZ.value.set(p.x, 0, p.z);
     });
 
-    // Wrap blade center positions around the camera for infinite scrolling illusion
-    const relative = sub(centerNode, playerXZ);
-    const wrappedX = sub(mod(add(relative.x, halfSize), fieldSize), halfSize);
-    const wrappedZ = sub(mod(add(relative.z, halfSize), fieldSize), halfSize);
-    const wrappedCenter = add(vec3(wrappedX, centerNode.y, wrappedZ), playerXZ);
-
-    const camToBladeXZ = normalize(add(sub(cameraPosition, wrappedCenter), vec3(0.0001)));
-    const right = normalize(vec3(camToBladeXZ.z, 0.0, negate(camToBladeXZ.x)));
-    const up = vec3(0.0, 1.0, 0.0);
-
-    // only use x/y
-    const rotatedOffset = add(
-        mul(right, vec3(offsetNode.x)),
-        mul(up, vec3(offsetNode.y))
-    );
-
-    const localHeight = clamp(div(offsetNode.y, 0.25), 0.0, 1.0);
-
-    const windOffset = windFn([noiseTex, worldPos, direction, windSpeed, windScale1, windScale2]).mul(localHeight);
-
-    const finalPosition = add(add(wrappedCenter, rotatedOffset), vec3(windOffset.x, 0.0, windOffset.y));
-
-    const matcapColor = texture(matcapTexture, matcapUV);
+    // infinite scrolling wrap around player
+    const fsX = gridSize * spacing * scaleX;
+    const fsZ = gridSize * spacing * scaleZ;
+    const halfFSX = fsX * 0.5;
+    const halfFSZ = fsZ * 0.5;
+    const rel = sub(centerNode, add(playerXZ, vec3(0, 0, gridOffsetZ)));
+    const wx = sub(mod(add(rel.x, halfFSX), fsX), halfFSX);
+    const wz = sub(mod(add(rel.z, halfFSZ), fsZ), halfFSZ);
 
 
-    const topColor = vec3(...new THREE.Color(topColorHex).convertSRGBToLinear().toArray());
-    const bottomColor = vec3(...new THREE.Color(bottomColorHex).convertSRGBToLinear().toArray());
-    const gradientColor = mix(bottomColor, topColor, localHeight);
+    const wrappedCenter = add(vec3(wx, centerNode.y, wz), add(playerXZ, vec3(0, 0, gridOffsetZ)))
 
-    // Final color: gradient modulated with matcap lighting
-    const finalColor = mul(matcapColor, gradientColor);
 
-    // Construct physically-based material
-    const material = new MeshStandardNodeMaterial();
-    material.roughnessNode = uniform(roughness); // fully rough (no specular shine)
-    material.metalnessNode = uniform(metalness); // no metallic reflection
-    material.positionNode = finalPosition;
-    material.colorNode = finalColor;
+    // billboard rotation to face camera
+    const toBlade = normalize(add(sub(cameraPosition, wrappedCenter), vec3(0.0001)));
+    const right = normalize(vec3(toBlade.z, 0, negate(toBlade.x)));
+    const up    = vec3(0, 1, 0);
+    const rotatedOffset = add(mul(right, vec3(offsetNode.x)), mul(up, vec3(offsetNode.y)));
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.frustumCulled = false
+    // wind offset scaled by blade height
+    const timeNoise = texture(noiseTex, worldPos.xy.mul(0.0001)).r;
+    const bladeHeightInfluence = clamp(div(offsetNode.y, 0.25), 0, 1)
+    const dirNode = uniform(new THREE.Vector2(windDirectionX, windDirectionZ).normalize());
+    const windA = windFn([timeNoise, noiseTex, worldPos, dirNode, uniform(windSpeed), uniform(windScale1), uniform(windScale2)])
+        .mul(bladeHeightInfluence);
+    const windB = windFn([timeNoise, noiseTex, worldPos, negate(dirNode), uniform(windSpeed), uniform(windScale1), uniform(windScale2)])
+        .mul(bladeHeightInfluence);
+    const windOffset = vec3(windB.x, 0, windA.y);
 
-    // Return the final mesh
-    return (
-        <primitive object={mesh}/>
-    );
+    // final vertex position and color gradient + matcap shading
+    const finalPos = add(add(wrappedCenter, rotatedOffset), windOffset);
+    const mColor = texture(matcapTexture, matcapUV);
+    const topC = vec3(...new THREE.Color(topColorHex).convertSRGBToLinear().toArray());
+    const botC = vec3(...new THREE.Color(bottomColorHex).convertSRGBToLinear().toArray());
+    const t = clamp(div(offsetNode.y, 0.25), 0, 1);
+    const colorGrad = mix(botC, topC, t);
+    const finalColor = mul(mColor, colorGrad);
+
+    const mat = new MeshStandardNodeMaterial({ roughnessNode: uniform(roughness), metalnessNode: uniform(metalness) });
+    mat.positionNode = finalPos;
+    mat.colorNode    = finalColor;
+
+    const mesh = new THREE.Mesh(geometry, mat);
+    mesh.frustumCulled = false;
+
+    return <primitive
+        object={mesh}
+        receiveShadow
+    />;
 }

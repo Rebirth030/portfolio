@@ -1,211 +1,212 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState, forwardRef } from "react";
 import { RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
-import { useGLTF, useKeyboardControls } from "@react-three/drei";
+import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useControls, folder } from "leva"; // Import folder
+import { useControls, folder } from "leva";
 import * as THREE from "three";
-import { forwardRef } from 'react';
-
 
 const UP_VECTOR = new THREE.Vector3(0, 1, 0);
-const DOWN_VECTOR = new THREE.Vector3(0, -1, 0);
 
-
-const Player = forwardRef((props, ref) => {
-    const meshRef = useRef();
-    const [subscribeKeys, getKeys] = useKeyboardControls();
-    const { rapier, world } = useRapier();
-    const rapierWorld = world;
-
-    // --- 3D Model ---
-    // Use useMemo to prevent reloading/re-cloning the model unnecessarily
-    const { scene: foxScene } = useGLTF("./Fox/glTF/Fox.gltf");
-
-    // --- Leva Controls ---
-    const {
-        // Physics Properties (existing)
-        friction, restitution, linearDamping, angularDamping,
-        // Capsule Collider (new, default to current values)
-        capsuleHalfHeight, capsuleRadius,
-        // Movement (existing + new)
-        walkImpulseStrength, runMultiplier, airControlMultiplier, rotationSpeed,
-        // Jumping (existing + new)
-        jumpHeight, jumpTriggerHeight, groundCheckDistance,
-        // Camera Follow (new)
-        cameraOffsetY, cameraOffsetZ, cameraTargetOffsetY, cameraLerpFactor, cameraFollowing,
-    } = useControls("Player Settings", {
-        Physics: folder({
-             friction: { value: 0.5, min: 0, max: 1, step: 0.01 },
-             restitution: { value: 0.1, min: 0, max: 1, step: 0.01 },
-             linearDamping: { value: 0.9, min: 0, max: 5, step: 0.01 },
-             angularDamping: { value: 0.9, min: 0, max: 5, step: 0.01 },
-        }, {collapsed: true}),
-        Collider: folder({
-            // Default to current hardcoded values
-            capsuleHalfHeight: { value: 0.3, min: 0.1, max: 1, step: 0.01 },
-            capsuleRadius: { value: 0.3, min: 0.1, max: 1, step: 0.01 },
-        }, {collapsed: true}),
-        Movement: folder({
-             walkImpulseStrength: { value: 3.5, min: 0, max: 10, step: 0.1 },
-             runMultiplier: { value: 1.40, min: 1, max: 5, step: 0.01 },
-             airControlMultiplier: { value: 0.2, min: 0, max: 1, step: 0.01 },
-             rotationSpeed: { value: 15, min: 1, max: 30, step: 1 },
-        }, {collapsed: true}),
-        Jumping: folder({
-            jumpHeight: { value: 1.5, min: 0, max: 10, step: 0.1 },
-            // How close to ground to *initiate* jump
-            jumpTriggerHeight: { value: 0.1, min: 0.01, max: 0.5, step: 0.01 },
-            // How far to check down for ground status in general
-            groundCheckDistance: { value: 0.15, min: 0.01, max: 0.5, step: 0.01 },
-        }, {collapsed: true}),
-        Camera: folder({
-            // Defaults based on previous hardcoded values
-            cameraFollowing: { value: true },
-            cameraOffsetY: { value: 3.9, min: 0, max: 5, step: 0.1 },
-            cameraOffsetZ: { value: 4.0, min: 1, max: 10, step: 0.1 },
-            cameraTargetOffsetY: { value: 0.3, min: 0, max: 5, step: 0.1 },
-            cameraLerpFactor: { value: 5.0, min: 1, max: 20, step: 0.1 },
-        }, {collapsed: true}),
-    }, {collapsed: true});
-
-    // --- Camera State ---
-    const smoothedCameraPosition = useMemo(() => new THREE.Vector3(10, 10, 10), []);
-    const smoothedCameraTarget = useMemo(() => new THREE.Vector3(), []);
-
-    // --- Reusable Objects for Frame Loop ---
-    const _rayOrigin = useMemo(() => new THREE.Vector3(), []);
-    const _impulse = useMemo(() => new THREE.Vector3(), []);
-    const _cameraPosition = useMemo(() => new THREE.Vector3(), []);
-    const _cameraTarget = useMemo(() => new THREE.Vector3(), []);
-    const _rotateQuat = useMemo(() => new THREE.Quaternion(), []);
-
-    // --- Ground Check Function ---
-    const checkGrounded = (rigidBody, distance) => {
-        if (!rapierWorld || !rigidBody) return false;
-
-        // Raycast origin: center of the bottom sphere of the capsule
-        _rayOrigin.copy(rigidBody.translation());
-        _rayOrigin.y -= capsuleHalfHeight; // Move origin to the bottom sphere center
-
-        const ray = new rapier.Ray(_rayOrigin, DOWN_VECTOR);
-        const maxToi = distance + capsuleRadius; // Check from sphere surface down
-        const solid = true;
-        const colliderToExclude = rigidBody.collider(0); // Get the ref's collider
-
-        const hit = rapierWorld.castRay(
-            ray, maxToi, solid,
-            undefined, undefined, // filterFlags, filterGroups
-            colliderToExclude
-        );
-
-        // Grounded if hit is within the desired distance from the *surface* of the bottom sphere
-        return hit && typeof hit.timeOfImpact === 'number' && hit.timeOfImpact <= distance + capsuleRadius;
-    };
-
-
-    // --- Jump Action ---
-    const jump = () => {
-        const rigidBody = ref.current;
-        if (!rigidBody) return;
-
-        // Check if grounded before jumping using the specific jumpTriggerHeight
-        if (checkGrounded(rigidBody, jumpTriggerHeight)) {
-            rigidBody.applyImpulse({ x: 0, y: jumpHeight, z: 0 }, true);
-        }
-    };
-
-    useEffect(() => {
-        const unsubscribeJump = subscribeKeys(
-            (state) => state.jump,
-            (value) => { if (value) jump(); }
-        );
-        return unsubscribeJump;
-    }, [subscribeKeys, jump, rapierWorld, capsuleHalfHeight, capsuleRadius, jumpHeight, jumpTriggerHeight]); // Added dependencies
-
+// -----------------------------------------------------------------------------
+// Hook: Smooth Camera Follow
+// -----------------------------------------------------------------------------
+function useSmoothCamera(bodyApi, {
+    cameraFollowing,
+    cameraOffsetY,
+    cameraOffsetZ,
+    cameraTargetOffsetY,
+    cameraLerpFactor
+}) {
+    const smoothedPos = useMemo(() => new THREE.Vector3(), []);
+    const smoothedTg  = useMemo(() => new THREE.Vector3(), []);
+    const tmpPos      = useMemo(() => new THREE.Vector3(), []);
+    const tmpTg       = useMemo(() => new THREE.Vector3(), []);
 
     useFrame((state, delta) => {
-        const bodyApi = ref.current;
-        const mesh = meshRef.current;
+        if (!bodyApi || !cameraFollowing) return;
+        const p = bodyApi.translation();
+        tmpPos.set(p.x, p.y + cameraOffsetY, p.z + cameraOffsetZ);
+        tmpTg.set(p.x, p.y + cameraTargetOffsetY, p.z);
+        smoothedPos.lerp(tmpPos, cameraLerpFactor * delta);
+        smoothedTg .lerp(tmpTg,  cameraLerpFactor * delta);
+        state.camera.position.copy(smoothedPos);
+        state.camera.lookAt(smoothedTg);
+    });
+}
 
-        if (!bodyApi || !mesh || !rapierWorld) return;
+// -----------------------------------------------------------------------------
+// Player Component
+// -----------------------------------------------------------------------------
+const Player = forwardRef((props, reference) => {
+    // Refs & state
+    const momentum     = useRef(new THREE.Vector3());
+    const prevSector   = useRef(0);                   // track last 8-sector index
+    const meshRef      = useRef();
+    const [ , getKeys] = useKeyboardControls();
+    const { world: rapierWorld } = useRapier();
 
-        const isGrounded = checkGrounded(bodyApi, groundCheckDistance);
+    // Load model & animations
+    const { scene: characterScene, animations } = useGLTF("./Character.glb");
+    const { actions, names } = useAnimations(animations, characterScene);
+    const [currentAction, setCurrentAction] = useState("Idle");
 
-        const { forward, backward, leftward, rightward, run } = getKeys();
+    const idleIndex = names.indexOf("Idle");
+    const walkIndex = names.indexOf("Walk");
+    const runIndex  = names.indexOf("Run");
 
-        _impulse.set(
-            (rightward ? 1 : 0) - (leftward ? 1 : 0),
-            0, // Horizontal impulse only
-            (backward ? 1 : 0) - (forward ? 1 : 0)
-        );
-        const hasInput = _impulse.lengthSq() > 0;
-
-        if (hasInput) {
-             _impulse.normalize();
-
-            let baseStrength = walkImpulseStrength;
-            if (!isGrounded) {
-                baseStrength *= airControlMultiplier;
+    // Enable shadows once
+    useEffect(() => {
+        characterScene.traverse(child => {
+            if (child.isSkinnedMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
             }
+        });
+    }, [characterScene]);
 
-            const runActive = isGrounded && run;
-            const effectiveImpulseStrength = runActive ? baseStrength * runMultiplier : baseStrength;
+    // Leva controls
+    const {
+        capsuleHalfHeight, capsuleRadius,
+        walkImpulseStrength, runMultiplier, rotationSpeed, decelFactor,
+        cameraOffsetY, cameraOffsetZ, cameraTargetOffsetY, cameraLerpFactor, cameraFollowing
+    } = useControls("Player Settings", {
+        Collider: folder({
+            capsuleHalfHeight: { value: 0.7, min: 0.1, max: 1, step: 0.01 },
+            capsuleRadius:     { value: 0.3, min: 0.1, max: 1, step: 0.01 },
+        }),
+        Movement: folder({
+            walkImpulseStrength: { value: 2.5, min: 0, max: 10, step: 0.1 },
+            runMultiplier:       { value: 2.25, min: 1, max: 5, step: 0.01 },
+            rotationSpeed:       { value: 15,   min: 1, max: 30, step: 1 },
+            decelFactor:         { value: 4.75, min: 0.01, max: 10, step: 0.01 },
+        }),
+        /* Jumping: folder({
+          jumpHeight:           { value: 2.9,  min: 0,  max: 10,   step: 0.1 },
+          jumpTriggerHeight:    { value: 0.1,  min: 0.01, max: 0.5, step: 0.01 },
+          groundCheckDistance:  { value: 0.15, min: 0.01, max: 0.5, step: 0.01 },
+          airControlMultiplier: { value: 0.2,  min: 0,    max: 1,   step: 0.01 },
+        }, { collapsed: true }), */
+        Camera: folder({
+            cameraFollowing:     { value: true },
+            cameraOffsetY:       { value: 8.2,  min: 0,  max: 20, step: 0.1 },
+            cameraOffsetZ:       { value: 8.7,  min: 1,  max: 20, step: 0.1 },
+            cameraTargetOffsetY: { value: 0.3,  min: 0,  max: 5,  step: 0.1 },
+            cameraLerpFactor:    { value: 5.0,  min: 1,  max: 20, step: 0.1 },
+        }),
+    }, { collapsed: true });
 
+    // Fade animation when currentAction changes
+    useEffect(() => {
+        const name = names[
+            currentAction === "Idle" ? idleIndex
+                : currentAction === "Walk" ? walkIndex
+                    : runIndex
+            ];
+        const action = actions[name];
+        action?.reset().fadeIn(0.2).play();
+        return () => action?.fadeOut(0.5);
+    }, [currentAction, actions, names]);
 
-            _impulse.multiplyScalar(effectiveImpulseStrength * delta);
-            bodyApi.applyImpulse(_impulse, true);
+    // Pre-allocate temporaries
+    const _dir   = useMemo(() => new THREE.Vector3(), []);
+    const _quat  = useMemo(() => new THREE.Quaternion(), []);
+    const _zero  = useMemo(() => new THREE.Vector3(), []);
 
+    // Optional jump helpers (commented out)
+    /*
+    const checkGrounded = (rigidBody) => { … };
+    const jump = () => { … };
+    useEffect(() => { … }, [subscribeKeys, jump]);
+    */
 
-            const moveAngle = Math.atan2(_impulse.x / (effectiveImpulseStrength * delta), _impulse.z / (effectiveImpulseStrength * delta)); // Get angle from normalized direction
-             _rotateQuat.setFromAxisAngle(UP_VECTOR, moveAngle);
+    // Attach smooth camera
+    useSmoothCamera(reference.current, {
+        cameraFollowing,
+        cameraOffsetY,
+        cameraOffsetZ,
+        cameraTargetOffsetY,
+        cameraLerpFactor
+    });
 
-             mesh.quaternion.rotateTowards(_rotateQuat, delta * rotationSpeed);
+    // Main update loop
+    useFrame((_, delta) => {
+        const body = reference.current;
+        if (!body) return;
+
+        // 1) Read input & build raw direction vector
+        const { forward, backward, leftward, rightward, run } = getKeys();
+        _dir.set(
+            ( rightward ?  1 : 0 ) - ( leftward  ? 1 : 0 ),
+            0,
+            ( backward  ? 1 : 0 ) - ( forward   ? 1 : 0 )
+        );
+
+        // 2) Compute raw angle & quantize to 8 sectors
+        let sector = prevSector.current;
+        let targetVel = _zero;
+        if (_dir.lengthSq() > 0) {
+            const angle = Math.atan2(_dir.x, _dir.z);         // angle from Z-axis
+            const eight = 2 * Math.PI / 8;
+            sector = Math.round(angle / eight) % 8;          // nearest octant
+            const quantAngle = sector * eight;
+            // 3) Build quantized direction
+            const dir8 = new THREE.Vector3(
+                Math.sin(quantAngle),
+                0,
+                Math.cos(quantAngle)
+            );
+            // 4) Scale by desired speed
+            const speed = walkImpulseStrength * (run ? runMultiplier : 1);
+            targetVel = dir8.multiplyScalar(speed);
         }
 
-        if (cameraFollowing) {
-            const bodyPosition = bodyApi.translation();
-            _cameraPosition.set(
-                bodyPosition.x,
-                bodyPosition.y + cameraOffsetY,
-                bodyPosition.z + cameraOffsetZ
-            );
-            _cameraTarget.set(
-                bodyPosition.x,
-                bodyPosition.y + cameraTargetOffsetY,
-                bodyPosition.z
-            );
+        // 5) Update momentum:
+        //    - if sector changed, snap immediately
+        //    - else smoothly lerp towards targetVel
+        if (sector !== prevSector.current) {
+            momentum.current.copy(targetVel);
+            prevSector.current = sector;
+        } else {
+            const t = Math.min(1, decelFactor * delta);
+            momentum.current.lerp(targetVel, t);
+        }
 
-            smoothedCameraPosition.lerp(_cameraPosition, cameraLerpFactor * delta);
-            smoothedCameraTarget.lerp(_cameraTarget, cameraLerpFactor * delta);
+        // 6) Apply velocity (keep vertical)
+        const { y } = body.linvel();
+        body.setLinvel(
+            { x: momentum.current.x, y, z: momentum.current.z },
+            true
+        );
 
-            state.camera.position.copy(smoothedCameraPosition);
-            state.camera.lookAt(smoothedCameraTarget);
+        // 7) Rotate mesh to face quantized movement dir
+        if (_dir.lengthSq() > 0) {
+            _quat.setFromAxisAngle(UP_VECTOR, sector * (2 * Math.PI / 8));
+            meshRef.current.quaternion.rotateTowards(_quat, rotationSpeed * delta);
+        }
+
+        // 8) Switch animations: Idle / Walk / Run
+        const nextAction = _dir.lengthSq() > 0
+            ? (run ? "Run" : "Walk")
+            : "Idle";
+        if (currentAction !== nextAction) {
+            setCurrentAction(nextAction);
         }
     });
 
-
     return (
         <RigidBody
-            ref={ref}
+            ref={reference}
             colliders={false}
             canSleep={false}
             position={[0, 3, 0]}
-            friction={friction}
-            restitution={restitution}
-            linearDamping={linearDamping}
-            angularDamping={angularDamping}
             type="dynamic"
             enabledRotations={[false, false, false]}
         >
-
             <CapsuleCollider args={[capsuleHalfHeight, capsuleRadius]} />
-
             <primitive
-                object={foxScene} // Use the cloned model
-                scale={0.008}
-                position-y={-0.5}
                 ref={meshRef}
-                rotation-y={Math.PI}
+                object={characterScene}
+                position-y={-capsuleHalfHeight - capsuleRadius}
             />
         </RigidBody>
     );

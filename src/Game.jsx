@@ -1,4 +1,4 @@
-import {Environment, OrbitControls} from '@react-three/drei'
+import {Environment, OrbitControls, Sky} from '@react-three/drei'
 import {useControls} from 'leva'
 import FloorGrid from "./exchange/FloorGrid.jsx";
 import {Physics, RigidBody} from "@react-three/rapier";
@@ -30,13 +30,17 @@ export default function Game() {
                     <meshStandardMaterial />
                 </mesh>
             </RigidBody>
-
                 <Player ref={playerRef}/>
                 <InfiniteGrass playerRef={playerRef}/>
 
-
             </Physics>
-            <Environment preset="apartment" background/>
+            <ambientLight intensity={1}/>
+            <directionalLight
+                position={[10, 10, 5]}
+                intensity={1}
+                castShadow
+            />
+            {/*<Environment preset="sunset" background/>*/}
 
         </>
     )
