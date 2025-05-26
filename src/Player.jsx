@@ -3,7 +3,9 @@ import { RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useControls, folder } from "leva";
-import * as THREE from "three";
+import * as THREE from "three/webgpu";
+import {mrt, uniform, output} from "three/tsl";
+import buildNodeMaterialFromExisting from "./stores/useNodeMaterialConverter.jsx";
 
 const UP_VECTOR = new THREE.Vector3(0, 1, 0);
 
@@ -31,7 +33,7 @@ function useSmoothCamera(bodyApi, {
         smoothedTg .lerp(tmpTg,  cameraLerpFactor * delta);
         state.camera.position.copy(smoothedPos);
         state.camera.lookAt(smoothedTg);
-    });
+    })
 }
 
 // -----------------------------------------------------------------------------
@@ -56,10 +58,14 @@ const Player = forwardRef((props, reference) => {
 
     // Enable shadows once
     useEffect(() => {
+
         characterScene.traverse(child => {
-            if (child.isSkinnedMesh) {
+            if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+                console.log(child.material)
+                child.material = buildNodeMaterialFromExisting(child.material)
+                child.geometry.computeVertexNormals()
             }
         });
     }, [characterScene]);
