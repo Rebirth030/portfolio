@@ -3,9 +3,14 @@ import * as THREE from "three/webgpu";
 import {color, rangeFog, uniform, rangeFogFactor, fog} from "three/tsl";
 import MeshGridMaterial, {MeshGridMaterialLine} from "./MeshGridMaterial.js";
 import {RigidBody} from "@react-three/rapier";
+import {useGLTF} from "@react-three/drei";
+import {useRef} from "react";
+import {useFrame} from "@react-three/fiber";
 
 
 export default function FloorGrid() {
+
+    const meshRef = useRef()
     /**
      * Material
      */
@@ -37,23 +42,22 @@ export default function FloorGrid() {
         antialiased: antialiased,
         reference: 'worldTriplanar',
         side: THREE.DoubleSide,
-        lines
+        /*displacementMap: new THREE.TextureLoader().load('./Heightmap.png'),
+        displacementScale: 20,*/
+        lines,
     })
-
-
-
-
-
 
     return (
         <RigidBody
             type={"fixed"}
             rotation-x={-Math.PI * 0.5}
-            scale={[1, 1, 0.4]}
+            scale={[1, 1, 1]}
             friction={1}
         >
-            <mesh>
-                <boxGeometry args={[200, 200, 1]}/>
+            <mesh
+            ref={meshRef}
+            >
+                <primitive object={nodes.Plane.geometry} attach="geometry" />
                 <primitive object={worldGridMaterial}/>
             </mesh>
         </RigidBody>

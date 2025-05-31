@@ -7,8 +7,9 @@ import {useRef} from "react";
 import * as THREE from "three/webgpu";
 import {useFrame} from "@react-three/fiber";
 import Postprocessing from "./Postprocessing.jsx";
-import {tslFn, vec4} from "three/src/Three.TSL.js";
+import {Fn, vec4} from "three/src/Three.TSL.js";
 import {useControls} from "leva";
+import Terrain from "./Terrain.jsx";
 
 
 export default function Game() {
@@ -25,8 +26,8 @@ export default function Game() {
         if (!playerRef.current || !lightRef.current) return;
 
         lightRef.current.position.copy(playerRef.current.translation());
-        lightRef.current.position.y += 4;
-        lightRef.current.position.x += 10;
+        lightRef.current.position.y += 10;
+        lightRef.current.position.x += 25;
         lightRef.current.target.position.copy(playerRef.current.translation());
 
         lightRef.current.target.updateMatrixWorld();
@@ -35,7 +36,7 @@ export default function Game() {
     const material = new THREE.MeshStandardNodeMaterial({
         color: new THREE.Color(0x00ff00),
     })
-    material.shadowNode = tslFn(() => {
+    material.castShadowNode = Fn(() => {
         return vec4(1,0,0,0)
     })
 
@@ -43,19 +44,19 @@ export default function Game() {
     return (
         <>
             <Physics
-                debug={false}
+                debug={true}
                 updateLoop={"follow"}
                 timestep="fixed"
 
             >
 
                 <OrbitControls/>
-                <FloorGrid/>
+
                 <RigidBody>
                     <mesh
-                        position={[0, 5, 2]}
+                        position={[0, 50, 2]}
                         rotation={[-Math.PI * 0.5, 0, 0]}
-                        scale={0.7988585829734802}
+                        scale={1}
                         castShadow
                         receiveShadow
 
@@ -63,6 +64,16 @@ export default function Game() {
                         <boxGeometry/>
                         <primitive object={material} attach="material" />
                     </mesh>
+
+                    {/*<mesh
+                        position={[0, 6, 0]}
+                        scale={1}
+                        rotation={[-Math.PI* 0.5, 0, 0]}
+                        >
+                        <planeGeometry args={[10, 10, 10, 10]}/>
+                        <primitive object={planMaterial} attach="material" />
+                    </mesh>*/}
+
                 </RigidBody>
                 <Player ref={playerRef}/>
                 <directionalLight
@@ -76,9 +87,10 @@ export default function Game() {
 
 
                 <InfiniteGrass playerRef={playerRef}/>
-
+                <Terrain/>
             </Physics>
             <ambientLight intensity={1}/>
+
 
             <Postprocessing/>
 

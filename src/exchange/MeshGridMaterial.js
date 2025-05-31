@@ -1,6 +1,7 @@
 import {clamp, smoothstep, If, color, Fn, uniform, vec3, vec4, positionWorld, normalWorld, mix, vec2, uv} from "three/tsl";
-import {NodeMaterial} from "three/webgpu";
+import {MeshBasicNodeMaterial} from "three/webgpu";
 import {Color} from "three";
+import * as THREE from "three/webgpu";
 
 
 
@@ -85,7 +86,7 @@ class MeshGridMaterialLine
     }
 }
 
-class MeshGridMaterial extends NodeMaterial
+class MeshGridMaterial extends THREE.MeshStandardNodeMaterial
 {
     constructor(parameters)
     {

@@ -63,7 +63,6 @@ const Player = forwardRef((props, reference) => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
-                console.log(child.material)
                 child.material = buildNodeMaterialFromExisting(child.material)
                 child.geometry.computeVertexNormals()
             }
@@ -204,7 +203,7 @@ const Player = forwardRef((props, reference) => {
             ref={reference}
             colliders={false}
             canSleep={false}
-            position={[0, 3, 0]}
+            position={[0, 25, 0]}
             type="dynamic"
             enabledRotations={[false, false, false]}
         >
