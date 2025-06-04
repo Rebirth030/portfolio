@@ -11,8 +11,8 @@ export default function Terrain() {
 
     const { heights, widthSegs, maxX, minX, maxZ, minZ } = useMemo(() => {
         const posAttr = mesh.geometry.attributes.position
-        const total = posAttr.count   // hard-coded total vertices for test
-        const rows =  Math.sqrt(total)    // hard-coded vertices per row
+        const total = posAttr.count   // total vertex count from mesh geometry
+        const rows =  Math.sqrt(total)    // vertices per row derived from data
         const widthSegs = rows - 1
 
 
