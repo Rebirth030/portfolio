@@ -75,11 +75,6 @@ export default function Terrain() {
             const idx = Math.round(((x - minX) / delta) * rows + ((z - minZ) / delta))
 
             heights[idx] = y
-
-
-            console.log(rows)
-            console.log("minX", minX, "maxX", maxX, "minZ", minZ, "maxZ", maxZ)
-            console.log(`vertex ${i}: x=${x}, z=${z} → idx=${idx} y=${y}` )
         }
         return { heights, widthSegs, maxX, minX, maxZ, minZ }
     }, [mesh])
@@ -87,7 +82,8 @@ export default function Terrain() {
     terrainData = { heights, widthSegs, maxX, minX, maxZ, minZ }
 
     return (
-        <>
+        <group
+        position={[0, -20, 0]}>
 
             <primitive object={mesh} />
 
@@ -103,6 +99,6 @@ export default function Terrain() {
                 position={[0, 0, 0]}
                 rotation={[0, 0, 0]}
             />
-        </>
+        </group>
     )
 }

@@ -1,7 +1,6 @@
 import { cameraPosition, matcapUV, attribute, add, mul, sub, mod, div, mix, clamp, uniform, vec2, vec3, normalize, negate, cross, dFdx, dFdy, texture, positionWorld, Fn, time } from 'three/tsl';
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { getHeightAt, getNormalAt } from '../Terrain.jsx';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { folder, useControls } from 'leva';
@@ -44,8 +43,11 @@ export default function InfiniteGrass({ playerRef }) {
     // load textures and set up wrapping for noise
     const matcapTexture = useLoader(THREE.TextureLoader, './matcap-grass2.png');
     const noiseTex = useLoader(THREE.TextureLoader, './noiseTexture.png');
+    const heightMapTex = useLoader(THREE.TextureLoader, './Heightmap.png');
     matcapTexture.colorSpace = THREE.SRGBColorSpace;
     noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
+    heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping;
+
 
     // procedural blade geometry: positions, offsets, normals
     const gridCountX = Math.max(1, Math.round(gridSize * scaleX));
@@ -66,8 +68,7 @@ export default function InfiniteGrass({ playerRef }) {
                 // Position des Stiels plus leichte Zufallsverschiebung
                 const x = ix * spacing - halfX + (Math.random() - 0.5) * spacing;
                 const z = iz * spacing - halfZ + (Math.random() - 0.5) * spacing;
-                const baseY = getHeightAt(x, z);
-                const normal = getNormalAt(x, z);
+                const baseY    = 0.2;
                 const variation = (Math.random() * 2 - 1) * maxHeightVariation;
 
                 // 3 Vertices pro Grashalm (links, rechts, oben)
@@ -83,7 +84,7 @@ export default function InfiniteGrass({ playerRef }) {
                     }
 
                     // nach oben ausgerichtete Normalen
-                    normals.set([normal.x, normal.y, normal.z], i * 3);
+                    normals.set([0, 1, 0], i * 3);
 
                     i++;
                 }
@@ -113,19 +114,33 @@ export default function InfiniteGrass({ playerRef }) {
     const fsZ = gridSize * spacing * scaleZ;
     const halfFSX = fsX * 0.5;
     const halfFSZ = fsZ * 0.5;
+
     const rel = sub(centerNode, add(playerXZ, vec3(0, 0, gridOffsetZ)));
     const wx = sub(mod(add(rel.x, halfFSX), fsX), halfFSX);
     const wz = sub(mod(add(rel.z, halfFSZ), fsZ), halfFSZ);
-
-
     const wrappedCenter = add(vec3(wx, centerNode.y, wz), add(playerXZ, vec3(0, 0, gridOffsetZ)))
+
+    // Höhenanpassung via Heightmap
+    const uv0 = div(
+        add(wrappedCenter.xz, vec2(100, 100)),
+        vec2(200, 200)
+    );
+    const uv = clamp(
+        vec2(uv0.x, sub(1.0, uv0.y)),
+        vec2(0, 0),
+        vec2(1, 1)
+    );
+    const h  = texture(heightMapTex, uv).r.mul(26.9366);
+
+    console.log(texture(heightMapTex, vec2(0,0)).r.mul(21))
+    console.log(vec3(wrappedCenter.x, texture(heightMapTex, vec2(0,0)).r.mul(21), wrappedCenter.z).get(0))
+    const finalCenter = vec3(wrappedCenter.x, h, wrappedCenter.z);
 
 
     // billboard rotation to face camera
-    const toBlade = normalize(add(sub(cameraPosition, wrappedCenter), vec3(0.0001)));
-    const upAttr = attribute('normal');
-    const up    = normalize(upAttr);
-    const right = normalize(cross(up, toBlade));
+    const toBlade       = normalize(add(sub(cameraPosition, finalCenter), vec3(0.0001)));
+    const right         = normalize(vec3(toBlade.z, 0, negate(toBlade.x)));
+    const up            = vec3(0, 1, 0);
     const rotatedOffset = add(mul(right, vec3(offsetNode.x)), mul(up, vec3(offsetNode.y)));
 
     // wind offset scaled by blade height
@@ -139,7 +154,7 @@ export default function InfiniteGrass({ playerRef }) {
     const windOffset = vec3(windB.x, 0, windA.y);
 
     // final vertex position and color gradient + matcap shading
-    const finalPos = add(add(wrappedCenter, rotatedOffset), windOffset);
+    const finalPos = add(add(finalCenter, rotatedOffset), windOffset);
     const mColor = texture(matcapTexture, matcapUV);
     const topC = vec3(...new THREE.Color(topColorHex).convertSRGBToLinear().toArray());
     const botC = vec3(...new THREE.Color(bottomColorHex).convertSRGBToLinear().toArray());
@@ -157,5 +172,6 @@ export default function InfiniteGrass({ playerRef }) {
     return <primitive
         object={mesh}
         receiveShadow
-    />;
+        position={[0, -20, 0]}
+    />
 }

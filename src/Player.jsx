@@ -27,6 +27,7 @@ function useSmoothCamera(bodyApi, {
     useFrame((state, delta) => {
         if (!bodyApi || !cameraFollowing) return;
         const p = bodyApi.translation();
+        console.log(p)
         tmpPos.set(p.x, p.y + cameraOffsetY, p.z + cameraOffsetZ);
         tmpTg.set(p.x, p.y + cameraTargetOffsetY, p.z);
         smoothedPos.lerp(tmpPos, cameraLerpFactor * delta);
