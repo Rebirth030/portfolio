@@ -19,10 +19,10 @@ export default function InfiniteGrass({ playerRef }) {
     const { gridSize, spacing, bladeHeight, maxHeightVariation, topColorHex, bottomColorHex, roughness, metalness, gridOffsetZ, scaleX, scaleZ,
         windSpeed, windScale1, windScale2, windDirectionX, windDirectionZ } = useControls('Infinite Grass', {
         Gras: folder({
-            gridSize: { value: 280, min: 10, max: 1000, step: 10 },
-            gridOffsetZ: { value: -5, min: -15, max: 0, step: 1 },  // X offset of grid center
-            scaleX: { value: 1.5, min: 0.1, max: 10, step: 0.1 },       // Scale grid spacing on X
-            scaleZ: { value: 0.8, min: 0.1, max: 10, step: 0.1 },
+            gridSize: { value: 510, min: 10, max: 1000, step: 10 },
+            gridOffsetZ: { value: -15, min: -15, max: 0, step: 1 },  // X offset of grid center
+            scaleX: { value: 1.6, min: 0.1, max: 10, step: 0.1 },       // Scale grid spacing on X
+            scaleZ: { value: 0.9, min: 0.1, max: 10, step: 0.1 },
             spacing:  { value: 0.11, min: 0.01, max: 1, step: 0.01 },
             bladeHeight: { value: 0.42, min: 0.05, max: 1, step: 0.01 },
             maxHeightVariation: { value: 0.11, min: 0, max: 0.2, step: 0.005 },
@@ -102,6 +102,8 @@ export default function InfiniteGrass({ playerRef }) {
     const offsetNode = attribute('offset');
     const playerXZ = uniform(new THREE.Vector3());
     const worldPos = positionWorld;
+    const uvOffsetNode = uniform(new THREE.Vector2(128, 128)); //Adjust Belnder terrain x,y to width / 2
+    const uvScaleNode  = uniform(new THREE.Vector2(1 / 256, 1 / 256)); //Adjust Belnder terrain x,y to 1/width
 
     // update player position uniform each frame
     useFrame(() => {
@@ -121,19 +123,13 @@ export default function InfiniteGrass({ playerRef }) {
     const wrappedCenter = add(vec3(wx, centerNode.y, wz), add(playerXZ, vec3(0, 0, gridOffsetZ)))
 
     // Höhenanpassung via Heightmap
-    const uv0 = div(
-        add(wrappedCenter.xz, vec2(100, 100)),
-        vec2(200, 200)
-    );
-    const uv = clamp(
-        vec2(uv0.x, sub(1.0, uv0.y)),
+    const uv0 = add(wrappedCenter.xz, uvOffsetNode).mul(uvScaleNode);
+    const uv  = clamp(
+        vec2(uv0.x, sub(1.0, uv0.y)), // nur V invertieren, U bleibt
         vec2(0, 0),
         vec2(1, 1)
     );
-    const h  = texture(heightMapTex, uv).r.mul(26.9366);
-
-    console.log(texture(heightMapTex, vec2(0,0)).r.mul(21))
-    console.log(vec3(wrappedCenter.x, texture(heightMapTex, vec2(0,0)).r.mul(21), wrappedCenter.z).get(0))
+    const h  = texture(heightMapTex, uv).r.mul(26.4394); //Add the Blender Object height here
     const finalCenter = vec3(wrappedCenter.x, h, wrappedCenter.z);
 
 
@@ -172,6 +168,6 @@ export default function InfiniteGrass({ playerRef }) {
     return <primitive
         object={mesh}
         receiveShadow
-        position={[0, -20, 0]}
+        position={[0, -21.9, 0]}
     />
 }

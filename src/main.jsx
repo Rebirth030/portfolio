@@ -8,6 +8,7 @@ import {StrictMode, Suspense,} from "react";
 import {Leva} from 'leva'
 import {Perf} from 'r3f-perf'
 import {KeyboardControls, StatsGl} from "@react-three/drei";
+import GpuTimestampResolver from "./GpuTimestampResolver.jsx";
 
 
 
@@ -26,7 +27,7 @@ createRoot(document.getElementById('root')).render(
                 <Canvas
                     gl={async (glProps) => {
                         const renderer = new THREE.WebGPURenderer(glProps)
-                        renderer.forceWebGL = false;
+                        renderer.forceWebGL = true;
                         renderer.toneMapping = THREE.ACESFilmicToneMapping
                         renderer.outputColorSpace = THREE.SRGBColorSpace
                         await renderer.init()
@@ -41,9 +42,8 @@ createRoot(document.getElementById('root')).render(
                     }}
                 >
                     <Game/>
-                    <StatsGl
-
-                    />
+                    <GpuTimestampResolver/>
+                    <StatsGl trackGPU/>
                 </Canvas>
             </KeyboardControls>
         </StrictMode>

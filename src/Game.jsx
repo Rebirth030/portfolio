@@ -27,7 +27,7 @@ export default function Game() {
 
         lightRef.current.position.copy(playerRef.current.translation());
         lightRef.current.position.y += 10;
-        lightRef.current.position.x += 25;
+        lightRef.current.position.z += 25;
         lightRef.current.target.position.copy(playerRef.current.translation());
 
         lightRef.current.target.updateMatrixWorld();
@@ -44,7 +44,7 @@ export default function Game() {
     return (
         <>
             <Physics
-                debug={true}
+                debug={false}
                 updateLoop={"follow"}
                 timestep="fixed"
 
@@ -78,8 +78,8 @@ export default function Game() {
                 <Player ref={playerRef}/>
                 <directionalLight
                     ref={lightRef}
-                    color={0xff7f24}
-                    intensity={10}
+                    color={0xddddff}
+                    intensity={1}
                     castShadow
                     shadow-mapSize={[1024, 1024]}
 

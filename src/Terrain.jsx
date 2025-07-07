@@ -2,59 +2,22 @@ import { useMemo }             from 'react'
 import { useGLTF }             from '@react-three/drei'
 import { HeightfieldCollider } from '@react-three/rapier'
 import * as THREE              from 'three/webgpu'
-
-let terrainData = null
-
-export function getHeightAt(x, z) {
-    if (!terrainData) return 0
-    const { heights, widthSegs, maxX, minX, maxZ, minZ } = terrainData
-    const rows = widthSegs + 1
-    const stepX = (maxX - minX) / widthSegs
-    const stepZ = (maxZ - minZ) / widthSegs
-
-    const gx = (x - minX) / stepX
-    const gz = (z - minZ) / stepZ
-    const ix = Math.floor(gx)
-    const iz = Math.floor(gz)
-    const fx = Math.min(Math.max(gx - ix, 0), 1)
-    const fz = Math.min(Math.max(gz - iz, 0), 1)
-
-    const clamp = (v, m, M) => Math.max(m, Math.min(M, v))
-    const ci = clamp(ix, 0, widthSegs - 1)
-    const cj = clamp(iz, 0, widthSegs - 1)
-
-    const idx = (i, j) => i * rows + j
-    const h00 = heights[idx(ci, cj)]
-    const h10 = heights[idx(ci + 1, cj)]
-    const h01 = heights[idx(ci, cj + 1)]
-    const h11 = heights[idx(ci + 1, cj + 1)]
-
-    const hx0 = h00 * (1 - fx) + h10 * fx
-    const hx1 = h01 * (1 - fx) + h11 * fx
-    return hx0 * (1 - fz) + hx1 * fz
-}
-
-export function getNormalAt(x, z) {
-    if (!terrainData) return new THREE.Vector3(0, 1, 0)
-    const step = (terrainData.maxX - terrainData.minX) / terrainData.widthSegs
-    const hL = getHeightAt(x - step, z)
-    const hR = getHeightAt(x + step, z)
-    const hD = getHeightAt(x, z - step)
-    const hU = getHeightAt(x, z + step)
-    return new THREE.Vector3(hL - hR, 2 * step, hD - hU).normalize()
-}
+import {useLoader} from "@react-three/fiber";
 
 
 export default function Terrain() {
-    const {meshes } = useGLTF('./PortfolioTerrain.glb', true)
-    const mesh = meshes.Plane
 
 
-    const { heights, widthSegs, maxX, minX, maxZ, minZ } = useMemo(() => {
+
+
+    const { heights, widthSegs, maxX, minX, maxZ, minZ, mesh } = useMemo(() => {
+        const {nodes, meshes } = useGLTF('./PortfolioTerrain.glb', true)
+        const mesh = nodes.Plane
+
         const posAttr = mesh.geometry.attributes.position
         const total = posAttr.count   // total vertex count from mesh geometry
-        const rows =  Math.sqrt(total)    // vertices per row derived from data
-        const widthSegs = rows - 1
+        const rows =  Math.sqrt(total)   // vertices per row derived from data
+        let widthSegs = rows - 1;
 
 
         // bounding box to get extents
@@ -63,23 +26,39 @@ export default function Terrain() {
         const minX  = bb.min.x, maxX = bb.max.x
         const minZ  = bb.min.z, maxZ = bb.max.z
 
+        console.log("bounding boy", mesh.geometry.boundingBox)
+
         // initialize all heights to the mesh’s lowest Y
-        const heights = new Float32Array(rows * rows).fill(bb.min.y)
+        const heights = new Float32Array(Math.round(rows * rows)).fill(bb.min.y)
+        console.log(heights.length)
 
-        // fill in each sample index
-        for (let i = 0; i < total; i++) {
-            const x = posAttr.array[i * 3 + 0]
-            const y = posAttr.array[i * 3 + 1]
-            const z = posAttr.array[i * 3 + 2]
-            const delta = (maxX - minX) / widthSegs
-            const idx = Math.round(((x - minX) / delta) * rows + ((z - minZ) / delta))
+        // 1) Basis-Werte einmalig berechnen
+                      // = rows
+        const deltaX    = (maxX - minX) / widthSegs;
+        const deltaZ    = (maxZ - minZ) / widthSegs;
 
-            heights[idx] = y
+// 2) Für jedes Vertex einzeln:
+        for (let k = 0; k < total; k++) {
+            const x = posAttr.array[k*3 + 0];
+            const y = posAttr.array[k*3 + 1];
+            const z = posAttr.array[k*3 + 2];
+
+            // 3) Spalten- und Zeilenindex separat bestimmen
+            let i = Math.round((x - minX) / deltaX);
+            let j = Math.round((z - minZ) / deltaZ);
+
+            // 5) Linearen Index korrekt berechnen: j * cols + i
+            const idx = Math.min(Math.max(i, 0), widthSegs) * rows + Math.min(Math.max(j, 0), widthSegs);
+
+            heights[idx] = y;
         }
-        return { heights, widthSegs, maxX, minX, maxZ, minZ }
-    }, [mesh])
 
-    terrainData = { heights, widthSegs, maxX, minX, maxZ, minZ }
+        const material = new THREE.MeshStandardNodeMaterial()
+
+
+        return { heights, widthSegs, maxX, minX, maxZ, minZ, mesh }
+    }, [])
+
 
     return (
         <group
@@ -98,6 +77,7 @@ export default function Terrain() {
                 type="fixed"
                 position={[0, 0, 0]}
                 rotation={[0, 0, 0]}
+                friction={1.5}
             />
         </group>
     )
