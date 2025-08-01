@@ -17,11 +17,11 @@ export default function Postprocessing() {
             threshold: { value: 0.00, min: 0.0, max: 1, step: 0.01 },
             strength:     { value: 0.1, min: 0.0, max: 3, step: 0.01 },
             radius:     { value: 0.1, min: 0.0, max: 1, step: 0.01 },
-        }),
+        }, { collapsed: true }),
         ToneMapping: folder({
             toneMappingExposure: { value: 0.7, min: 0.1, max: 3, step: 0.01 },
-        })
-    })
+        }, { collapsed: true })
+    }, { collapsed: true })
 
     const bloomPassRef = useRef();
     const postProcessingRef = useRef();

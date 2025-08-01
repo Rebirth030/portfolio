@@ -1,4 +1,4 @@
-import { cameraPosition, matcapUV, attribute, add, mul, sub, mod, div, mix, clamp, uniform, vec2, vec3, normalize, negate, cross, dFdx, dFdy, texture, positionWorld, Fn, time } from 'three/tsl';
+import { cameraPosition, matcapUV,smoothstep ,attribute, add,step , mul, sub, mod, div, mix, clamp, uniform, vec2, vec3, normalize, negate, cross, dFdx, dFdy, texture, positionWorld, Fn, time } from 'three/tsl';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
@@ -17,7 +17,9 @@ const windFn = Fn(([spatialVariation, noiseTex, worldPos, direction, speed, scal
 export default function InfiniteGrass({ playerRef }) {
     // UI controls for grass and wind parameters
     const { gridSize, spacing, bladeHeight, maxHeightVariation, topColorHex, bottomColorHex, roughness, metalness, gridOffsetZ, scaleX, scaleZ,
-        windSpeed, windScale1, windScale2, windDirectionX, windDirectionZ } = useControls('Infinite Grass', {
+        windSpeed, windScale1, windScale2, windDirectionX, windDirectionZ,
+        waterThreshold, hideHeight, shrinkRange, minScale
+    } = useControls('Infinite Grass', {
         Gras: folder({
             gridSize: { value: 510, min: 10, max: 1000, step: 10 },
             gridOffsetZ: { value: -15, min: -15, max: 0, step: 1 },  // X offset of grid center
@@ -37,6 +39,12 @@ export default function InfiniteGrass({ playerRef }) {
             windScale2: { value: 0.043, min: 0.01, max: 0.2, step: 0.005 },
             windDirectionX: { value: -1.0, min: -1, max: 1, step: 0.1 },
             windDirectionZ: { value:  1.0, min: -1, max: 1, step: 0.1 }
+        }, { collapsed: true }),
+        WaterSettings: folder({
+            waterThreshold: { value: 0.44, min: 0, max: 1, step: 0.01 },
+            hideHeight:     { value: 200, min: 0, max: 500, step: 1 },
+            shrinkRange:    { value: 0.42,  min: 0, max: 1, step: 0.01 },
+            minScale:       { value: 0.00,  min: 0, max: 1, step: 0.01 }
         }, { collapsed: true })
     }, { collapsed: true });
 
@@ -44,9 +52,11 @@ export default function InfiniteGrass({ playerRef }) {
     const matcapTexture = useLoader(THREE.TextureLoader, './matcap-grass2.png');
     const noiseTex = useLoader(THREE.TextureLoader, './noiseTexture.png');
     const heightMapTex = useLoader(THREE.TextureLoader, './Heightmap.png');
+    const terrainMapTex = useLoader(THREE.TextureLoader, './TerrainMap.png');
     matcapTexture.colorSpace = THREE.SRGBColorSpace;
     noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
     heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping;
+    terrainMapTex.wrapS = terrainMapTex.wrapT = THREE.RepeatWrapping;
 
 
     // procedural blade geometry: positions, offsets, normals
@@ -102,8 +112,8 @@ export default function InfiniteGrass({ playerRef }) {
     const offsetNode = attribute('offset');
     const playerXZ = uniform(new THREE.Vector3());
     const worldPos = positionWorld;
-    const uvOffsetNode = uniform(new THREE.Vector2(128, 128)); //Adjust Belnder terrain x,y to width / 2
-    const uvScaleNode  = uniform(new THREE.Vector2(1 / 256, 1 / 256)); //Adjust Belnder terrain x,y to 1/width
+    const uvOffsetNode = uniform(new THREE.Vector2(128, 128)); //Adjust Blender terrain x,y to width / 2
+    const uvScaleNode  = uniform(new THREE.Vector2(1 / 256, 1 / 256)); //Adjust Blender terrain x,y to 1/width
 
     // update player position uniform each frame
     useFrame(() => {
@@ -129,15 +139,38 @@ export default function InfiniteGrass({ playerRef }) {
         vec2(0, 0),
         vec2(1, 1)
     );
-    const h  = texture(heightMapTex, uv).r.mul(26.4394); //Add the Blender Object height here
+    const h  = texture(heightMapTex, uv).r.mul(27.7325); //Add the Blender Object height here
     const finalCenter = vec3(wrappedCenter.x, h, wrappedCenter.z);
 
+    // wenn isWater==1, dann Y auf hideHeight, sonst bleibt h
+    const waterMask = texture(terrainMapTex, uv).b;                   // 0..1 je nach Blauanteil
+    const isWater  = step(waterThreshold, waterMask);       // 1 wenn Blau > Threshold
+    const yClamped = mix(finalCenter.y, uniform(hideHeight), isWater);
+    const finalCenterClamped = vec3(finalCenter.x, yClamped, finalCenter.z);
+
+    const sEdge  = smoothstep(
+        waterThreshold - shrinkRange,
+        waterThreshold + shrinkRange,
+        waterMask
+    );
+
+    const sizeFactor = mix(1.0, minScale, sEdge);
 
     // billboard rotation to face camera
     const toBlade       = normalize(add(sub(cameraPosition, finalCenter), vec3(0.0001)));
     const right         = normalize(vec3(toBlade.z, 0, negate(toBlade.x)));
     const up            = vec3(0, 1, 0);
-    const rotatedOffset = add(mul(right, vec3(offsetNode.x)), mul(up, vec3(offsetNode.y)));
+
+    const scaledOffset = vec3(
+        offsetNode.x.mul(sizeFactor),
+        offsetNode.y.mul(sizeFactor),
+        0
+    );
+
+    const rotatedOffset = add(
+        mul(right, vec3(scaledOffset.x)),
+        mul(up,    vec3(scaledOffset.y))
+    );
 
     // wind offset scaled by blade height
     const timeNoise = texture(noiseTex, worldPos.xy.mul(0.0001)).r;
@@ -150,7 +183,7 @@ export default function InfiniteGrass({ playerRef }) {
     const windOffset = vec3(windB.x, 0, windA.y);
 
     // final vertex position and color gradient + matcap shading
-    const finalPos = add(add(finalCenter, rotatedOffset), windOffset);
+    const finalPos = add(add(finalCenterClamped, rotatedOffset), windOffset);
     const mColor = texture(matcapTexture, matcapUV);
     const topC = vec3(...new THREE.Color(topColorHex).convertSRGBToLinear().toArray());
     const botC = vec3(...new THREE.Color(bottomColorHex).convertSRGBToLinear().toArray());
@@ -168,6 +201,6 @@ export default function InfiniteGrass({ playerRef }) {
     return <primitive
         object={mesh}
         receiveShadow
-        position={[0, -21.9, 0]}
+        position={[0, -22.8, 0]}
     />
 }

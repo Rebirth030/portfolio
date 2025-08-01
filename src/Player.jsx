@@ -78,13 +78,13 @@ const Player = forwardRef((props, reference) => {
         Collider: folder({
             capsuleHalfHeight: { value: 0.7, min: 0.1, max: 1, step: 0.01 },
             capsuleRadius:     { value: 0.3, min: 0.1, max: 1, step: 0.01 },
-        }),
+        }, { collapsed: true }),
         Movement: folder({
             walkImpulseStrength: { value: 2.5, min: 0, max: 10, step: 0.1 },
             runMultiplier:       { value: 2.25, min: 1, max: 5, step: 0.01 },
             rotationSpeed:       { value: 15,   min: 1, max: 30, step: 1 },
             decelFactor:         { value: 4.75, min: 0.01, max: 10, step: 0.01 },
-        }),
+        }, { collapsed: true }),
         /* Jumping: folder({
           jumpHeight:           { value: 2.9,  min: 0,  max: 10,   step: 0.1 },
           jumpTriggerHeight:    { value: 0.1,  min: 0.01, max: 0.5, step: 0.01 },
@@ -131,7 +131,7 @@ const Player = forwardRef((props, reference) => {
         cameraOffsetZ,
         cameraTargetOffsetY,
         cameraLerpFactor
-    });
+    })
 
     // Main update loop
     useFrame((_, delta) => {

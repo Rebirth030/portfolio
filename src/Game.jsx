@@ -1,5 +1,4 @@
 import {OrbitControls} from '@react-three/drei'
-import FloorGrid from "./exchange/FloorGrid.jsx";
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
 import InfiniteGrass from "./gras/InfiniteGras.jsx";
@@ -8,7 +7,6 @@ import * as THREE from "three/webgpu";
 import {useFrame} from "@react-three/fiber";
 import Postprocessing from "./Postprocessing.jsx";
 import {Fn, vec4} from "three/src/Three.TSL.js";
-import {useControls} from "leva";
 import Terrain from "./Terrain.jsx";
 
 
@@ -16,12 +14,6 @@ export default function Game() {
     const playerRef = useRef();
     const lightRef = useRef();
 
-    const {shadow} = useControls("Shadow", {
-        shadow: {
-            value: new THREE.Color(0xf20c0c),
-
-        }
-    })
     useFrame(() => {
         if (!playerRef.current || !lightRef.current) return;
 
