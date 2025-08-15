@@ -41,9 +41,9 @@ export default function InfiniteGrass({ playerRef }) {
             windDirectionZ: { value:  1.0, min: -1, max: 1, step: 0.1 }
         }, { collapsed: true }),
         WaterSettings: folder({
-            waterThreshold: { value: 0.44, min: 0, max: 1, step: 0.01 },
+            waterThreshold: { value: 0.22, min: 0, max: 1, step: 0.01 },
             hideHeight:     { value: 200, min: 0, max: 500, step: 1 },
-            shrinkRange:    { value: 0.42,  min: 0, max: 1, step: 0.01 },
+            shrinkRange:    { value: 0.16,  min: 0, max: 1, step: 0.01 },
             minScale:       { value: 0.00,  min: 0, max: 1, step: 0.01 }
         }, { collapsed: true })
     }, { collapsed: true });
@@ -139,7 +139,7 @@ export default function InfiniteGrass({ playerRef }) {
         vec2(0, 0),
         vec2(1, 1)
     );
-    const h  = texture(heightMapTex, uv).r.mul(27.7325); //Add the Blender Object height here
+    const h  = texture(heightMapTex, uv).r.mul(22.4135); //Add the Blender Object height here
     const finalCenter = vec3(wrappedCenter.x, h, wrappedCenter.z);
 
     // wenn isWater==1, dann Y auf hideHeight, sonst bleibt h
@@ -201,6 +201,6 @@ export default function InfiniteGrass({ playerRef }) {
     return <primitive
         object={mesh}
         receiveShadow
-        position={[0, -22.8, 0]}
+        position={[0, -17.5, 0]}
     />
 }

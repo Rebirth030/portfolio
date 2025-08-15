@@ -41,7 +41,6 @@ export default function Game() {
                 timestep="fixed"
 
             >
-
                 <OrbitControls/>
 
                 <RigidBody>
