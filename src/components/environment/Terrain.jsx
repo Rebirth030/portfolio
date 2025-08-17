@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react'
 import { useGLTF } from '@react-three/drei'
-import { HeightfieldCollider } from '@react-three/rapier'
+import {HeightfieldCollider, RigidBody} from '@react-three/rapier'
 import * as THREE from 'three/webgpu'
 import { useLoader } from '@react-three/fiber'
 import {
@@ -218,6 +218,9 @@ export default function Terrain() {
                     strength:        0.1,
                 }}
             />
+            <RigidBody
+                type={"fixed"}
+            >
             <InstancedFromRefs
                 modelUrl="/Tree3Stem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
                 refsUrl="/Tree3Instances.glb"       // Dummies/Empties mit Transforms
@@ -225,7 +228,9 @@ export default function Terrain() {
                 castShadow
                 receiveShadow
                 position-y={-20}
+                physics={true}
             />
+            </RigidBody>
             <mesh
                 ref={planeRef}
                 position={PLANE_POS.toArray()}
