@@ -1,13 +1,13 @@
 import {OrbitControls} from '@react-three/drei'
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
-import InfiniteGrass from "./gras/InfiniteGras.jsx";
+import InfiniteGrass from "./environment/InfiniteGrass.jsx";
 import {useRef} from "react";
 import * as THREE from "three/webgpu";
 import {useFrame} from "@react-three/fiber";
 import Postprocessing from "./Postprocessing.jsx";
 import {Fn, vec4} from "three/src/Three.TSL.js";
-import Terrain from "./Terrain.jsx";
+import Terrain from "./environment/Terrain.jsx";
 
 
 export default function Game() {
