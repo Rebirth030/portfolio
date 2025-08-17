@@ -4,15 +4,7 @@ import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { folder, useControls } from 'leva';
-
-// windFn: layered noise-based 2D wind generator
-const windFn = Fn(([spatialVariation, noiseTex, worldPos, direction, speed, scale1, scale2]) => {
-    const uv1 = worldPos.xz.mul(scale1).add(direction.mul(time.mul(speed))).add(spatialVariation.mul(4));
-    const n1 = texture(noiseTex, uv1).r.sub(0.5);
-    const uv2 = worldPos.xz.mul(scale2).add(direction.mul(time.mul(speed.mul(0.3))));
-    const n2 = texture(noiseTex, uv2).r;
-    return direction.mul(n1.mul(n2));
-});
+import {buildWindOffsetNode, windFn} from "../stores/wind.js";
 
 export default function InfiniteGrass({ playerRef }) {
     // UI controls for grass and wind parameters
@@ -172,15 +164,13 @@ export default function InfiniteGrass({ playerRef }) {
         mul(up,    vec3(scaledOffset.y))
     );
 
-    // wind offset scaled by blade height
-    const timeNoise = texture(noiseTex, worldPos.xy.mul(0.0001)).r;
-    const bladeHeightInfluence = clamp(div(offsetNode.y, 0.25), 0, 1)
-    const dirNode = uniform(new THREE.Vector2(windDirectionX, windDirectionZ).normalize());
-    const windA = windFn([timeNoise, noiseTex, worldPos, dirNode, uniform(windSpeed), uniform(windScale1), uniform(windScale2)])
-        .mul(bladeHeightInfluence);
-    const windB = windFn([timeNoise, noiseTex, worldPos, negate(dirNode), uniform(windSpeed), uniform(windScale1), uniform(windScale2)])
-        .mul(bladeHeightInfluence);
-    const windOffset = vec3(windB.x, 0, windA.y);
+    const windOffset = buildWindOffsetNode({
+        noiseTex,
+        worldPos,
+        offsetNode,
+        params: { windDirectionX, windDirectionZ, windSpeed, windScale1, windScale2 },
+        mapXZTo: 'xz->(x,z)'
+    })
 
     // final vertex position and color gradient + matcap shading
     const finalPos = add(add(finalCenterClamped, rotatedOffset), windOffset);

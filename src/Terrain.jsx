@@ -8,6 +8,7 @@ import {
     mul, clamp, time, abs, add
 } from 'three/tsl'
 import { folder, useControls } from 'leva'
+import {InstancedFromRefs} from "./stores/ExtractInstancedObjectsOfGlb.jsx";
 
 export default function Terrain() {
     // ---------------- Controls ----------------
@@ -200,6 +201,31 @@ export default function Terrain() {
 
     return (
         <>
+            <InstancedFromRefs
+                modelUrl="Tree3Top.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
+                refsUrl="Tree3Instances.glb"       // Dummies/Empties mit Transforms
+                filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
+                castShadow
+                receiveShadow
+                position-y={-20}
+                wind={{
+                    windDirectionX: -1.0,
+                    windDirectionZ:  1.0,
+                    windSpeed:       0.2,
+                    windScale1:      0.06,
+                    windScale2:      0.055,
+                    heightDivisor:   0.25,
+                    strength:        0.1,
+                }}
+            />
+            <InstancedFromRefs
+                modelUrl="Tree3Stem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
+                refsUrl="Tree3Instances.glb"       // Dummies/Empties mit Transforms
+                filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
+                castShadow
+                receiveShadow
+                position-y={-20}
+            />
             <mesh
                 ref={planeRef}
                 position={PLANE_POS.toArray()}

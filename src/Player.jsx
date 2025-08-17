@@ -93,8 +93,8 @@ const Player = forwardRef((props, reference) => {
         }, { collapsed: true }), */
         Camera: folder({
             cameraFollowing:     { value: true },
-            cameraOffsetY:       { value: 8.2,  min: 0,  max: 20, step: 0.1 },
-            cameraOffsetZ:       { value: 8.7,  min: 1,  max: 20, step: 0.1 },
+            cameraOffsetY:       { value: 16.2,  min: 0,  max: 20, step: 0.1 },
+            cameraOffsetZ:       { value: 15.6,  min: 1,  max: 20, step: 0.1 },
             cameraTargetOffsetY: { value: 0.3,  min: 0,  max: 5,  step: 0.1 },
             cameraLerpFactor:    { value: 5.0,  min: 1,  max: 20, step: 0.1 },
         }),
