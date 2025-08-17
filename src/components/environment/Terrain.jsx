@@ -8,7 +8,7 @@ import {
     mul, clamp, time, abs, add
 } from 'three/tsl'
 import { folder, useControls } from 'leva'
-import {InstancedFromRefs} from "./stores/ExtractInstancedObjectsOfGlb.jsx";
+import {InstancedFromRefs} from "../InstancedFromRefs.jsx";
 
 export default function Terrain() {
     // ---------------- Controls ----------------
@@ -57,9 +57,9 @@ export default function Terrain() {
     const uvScale  = new THREE.Vector2(1 / 256, 1 / 256)
 
     // ---------------- Texturen (einmal laden) ----------------
-    const terrainMapTex = useLoader(THREE.TextureLoader, './TerrainMap.png')
-    const noiseTex      = useLoader(THREE.TextureLoader, './noiseTexture.png')
-    const heightMapTex  = useLoader(THREE.TextureLoader, './Heightmap.png')
+    const terrainMapTex = useLoader(THREE.TextureLoader, '/TerrainMap.png')
+    const noiseTex      = useLoader(THREE.TextureLoader, '/noiseTexture.png')
+    const heightMapTex  = useLoader(THREE.TextureLoader, '/Heightmap.png')
     ;[terrainMapTex, noiseTex].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping })
     heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping
 
@@ -168,7 +168,7 @@ export default function Terrain() {
 
     // ---------------- Collider + Terrain ----------------
     const { heights, widthSegs, maxX, minX, maxZ, minZ, mesh } = useMemo(() => {
-        const { nodes } = useGLTF('./PortfolioTerrain.glb', true)
+        const { nodes } = useGLTF('/PortfolioTerrain.glb', true)
         const mesh = nodes.Plane
 
         const posAttr = mesh.geometry.attributes.position
@@ -202,8 +202,8 @@ export default function Terrain() {
     return (
         <>
             <InstancedFromRefs
-                modelUrl="Tree3Top.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
-                refsUrl="Tree3Instances.glb"       // Dummies/Empties mit Transforms
+                modelUrl="/Tree3Top.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
+                refsUrl="/Tree3Instances.glb"       // Dummies/Empties mit Transforms
                 filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
                 castShadow
                 receiveShadow
@@ -219,8 +219,8 @@ export default function Terrain() {
                 }}
             />
             <InstancedFromRefs
-                modelUrl="Tree3Stem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
-                refsUrl="Tree3Instances.glb"       // Dummies/Empties mit Transforms
+                modelUrl="/Tree3Stem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
+                refsUrl="/Tree3Instances.glb"       // Dummies/Empties mit Transforms
                 filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
                 castShadow
                 receiveShadow

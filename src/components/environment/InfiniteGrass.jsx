@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { folder, useControls } from 'leva';
-import {buildWindOffsetNode, windFn} from "../stores/wind.js";
+import {buildWindOffsetNode, windFn} from "../../utils/wind.js";
 
 export default function InfiniteGrass({ playerRef }) {
     // UI controls for grass and wind parameters
@@ -41,10 +41,10 @@ export default function InfiniteGrass({ playerRef }) {
     }, { collapsed: true });
 
     // load textures and set up wrapping for noise
-    const matcapTexture = useLoader(THREE.TextureLoader, './matcap-grass2.png');
-    const noiseTex = useLoader(THREE.TextureLoader, './noiseTexture.png');
-    const heightMapTex = useLoader(THREE.TextureLoader, './Heightmap.png');
-    const terrainMapTex = useLoader(THREE.TextureLoader, './TerrainMap.png');
+    const matcapTexture = useLoader(THREE.TextureLoader, '/matcap-grass2.png');
+    const noiseTex = useLoader(THREE.TextureLoader, '/noiseTexture.png');
+    const heightMapTex = useLoader(THREE.TextureLoader, '/Heightmap.png');
+    const terrainMapTex = useLoader(THREE.TextureLoader, '/TerrainMap.png');
     matcapTexture.colorSpace = THREE.SRGBColorSpace;
     noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
     heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping;
