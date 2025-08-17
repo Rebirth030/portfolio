@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
 import { useLoader } from '@react-three/fiber';
 import { useMemo, useLayoutEffect, useEffect, useRef } from 'react'
-import buildNodeMaterialFromExisting from './useNodeMaterialConverter.jsx'
+import buildNodeMaterialFromExisting from '../utils/buildNodeMaterialFromExisting.js'
 
 // ⬇️ TSL-Nodes
 import {
@@ -11,7 +11,7 @@ import {
     vec3, float,
     positionWorld, positionLocal,
 } from 'three/tsl'
-import {buildWindOffsetNode, defaultWind, windFn} from "./wind.js";
+import {buildWindOffsetNode, defaultWind, windFn} from "../utils/wind.js";
 
 
 function collectInstanceMatrixArray(root, { filter, relativeTo = null } = {}) {
@@ -60,7 +60,7 @@ export function InstancedFromRefs({
     const refs  = useGLTF(refsUrl, true)
 
     // Noise (dein aktueller Pfad)
-    const noiseTex = useLoader(THREE.TextureLoader, './noiseTexture.png');
+    const noiseTex = useLoader(THREE.TextureLoader, '/noiseTexture.png');
     if (wind && noiseTex) {
         noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping
         noiseTex.minFilter = THREE.LinearMipMapLinearFilter

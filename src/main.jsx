@@ -3,12 +3,12 @@ import {createRoot} from 'react-dom/client'
 import * as THREE from 'three/webgpu'
 
 import {Canvas} from '@react-three/fiber'
-import Game from './Game'
+import Game from './components/Game.jsx'
 import {StrictMode, Suspense,} from "react";
 import {Leva} from 'leva'
 import {Perf} from 'r3f-perf'
 import {KeyboardControls, StatsGl} from "@react-three/drei";
-import GpuTimestampResolver from "./GpuTimestampResolver.jsx";
+import GpuTimestampResolver from "./components/GpuTimestampResolver.jsx";
 
 
 
