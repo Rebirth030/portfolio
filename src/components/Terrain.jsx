@@ -8,7 +8,7 @@ import {
     mul, clamp, time, abs, add
 } from 'three/tsl'
 import { folder, useControls } from 'leva'
-import {InstancedFromRefs} from "./stores/ExtractInstancedObjectsOfGlb.jsx";
+import {InstancedFromRefs} from "../stores/ExtractInstancedObjectsOfGlb.jsx";
 
 export default function Terrain() {
     // ---------------- Controls ----------------

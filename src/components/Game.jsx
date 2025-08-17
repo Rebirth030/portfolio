@@ -1,7 +1,7 @@
 import {OrbitControls} from '@react-three/drei'
 import {Physics, RigidBody} from "@react-three/rapier";
 import Player from "./Player.jsx";
-import InfiniteGrass from "./gras/InfiniteGras.jsx";
+import InfiniteGrass from "./grass/InfiniteGrass.jsx";
 import {useRef} from "react";
 import * as THREE from "three/webgpu";
 import {useFrame} from "@react-three/fiber";
