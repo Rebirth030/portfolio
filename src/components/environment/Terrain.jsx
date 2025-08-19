@@ -8,12 +8,14 @@ import {
     mul, clamp, time, abs, add
 } from 'three/tsl'
 import { folder, useControls } from 'leva'
-import {InstancedFromRefs} from "../InstancedFromRefs.jsx";
+import {InstancedFromRefs, InstancedFromRefsMesh} from "../InstancedFromRefs.jsx";
+import createBushMesh from "./Bush.jsx";
+import {createSpruceTopMesh} from "./SpruceTreeTop.jsx";
 
 export default function Terrain() {
     // ---------------- Controls ----------------
     const {
-        darkGreenHex, sandHex, lightBlueHex, darkBlueHex,
+        darkGreenHex, sandHex, lightBlueHex, darkBlueHex,bushColorHex,
         t1Min, t1Max, t2Min, t2Max, t3Min, t3Max,
         waterMax, waterMin, minBlue, maxBlue,
         slopeFrequency, timeSpeed, noiseFreq, noiseStrength, lineWidth,
@@ -23,7 +25,8 @@ export default function Terrain() {
             darkGreenHex: { value: '#426f48' },
             sandHex:      { value: '#dab984' },
             lightBlueHex: { value: '#66b0af' },
-            darkBlueHex:  { value: '#284159' }
+            darkBlueHex:  { value: '#284159' },
+            bushColorHex: { value: '#61803e' }
         }, { collapsed: true }),
         Thresholds: folder({
             t1Min: { value: 0.18, min: 0, max: 1, step: 0.01 },
@@ -197,17 +200,32 @@ export default function Terrain() {
         }
         return { heights, widthSegs, maxX, minX, maxZ, minZ, mesh }
         // ⛳️ Collider 1× berechnen (nichts ändert sich daran)
-    }, []) // <- vorher: [waterMin, waterMax]
+    }, [])
+
+    const bushMesh = useMemo(() => createBushMesh(), [bushColorHex])
+    const spruceMesh = useMemo(() => createSpruceTopMesh(), [bushColorHex])
 
     return (
         <>
             <InstancedFromRefs
-                modelUrl="/Tree3Top.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
+                modelUrl="/OakTreeStem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
+                refsUrl="/OakTreeInstances.glb"       // Dummies/Empties mit Transforms
+                filter={(o) => o.isMesh && o.name.startsWith('OakTree')}
+                castShadow
+                receiveShadow
+                position={[0,-20,0]}
+                physics={true}
+                colliderMode="base"
+                baseHeight={1}
+                baseRadius={0.45}
+            />
+            <InstancedFromRefsMesh
+                modelMesh={spruceMesh}       // Detail-Baum (ein Mesh, ein Material bevorzugt)
                 refsUrl="/Tree3Instances.glb"       // Dummies/Empties mit Transforms
                 filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
                 castShadow
                 receiveShadow
-                position-y={-20}
+                position={[0,-15,0]}
                 wind={{
                     windDirectionX: -1.0,
                     windDirectionZ:  1.0,
@@ -215,22 +233,36 @@ export default function Terrain() {
                     windScale1:      0.06,
                     windScale2:      0.055,
                     heightDivisor:   0.25,
-                    strength:        0.1,
+                    strength:        0.3,
                 }}
             />
-            <RigidBody
-                type={"fixed"}
-            >
             <InstancedFromRefs
                 modelUrl="/Tree3Stem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
                 refsUrl="/Tree3Instances.glb"       // Dummies/Empties mit Transforms
                 filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
                 castShadow
                 receiveShadow
-                position-y={-20}
+                position={[0,-20,0]}
                 physics={true}
             />
-            </RigidBody>
+            <InstancedFromRefsMesh
+                modelMesh={bushMesh}
+                refsUrl="/BushInstances.glb"
+                filter={(o) => o.isMesh && o.name.startsWith('Bush')}
+                castShadow
+                receiveShadow
+                position={[0,-20,0]}
+                wind={{
+                    windDirectionX: -1.0,
+                    windDirectionZ:  1.0,
+                    windSpeed:       0.2,
+                    windScale1:      0.06,
+                    windScale2:      0.055,
+                    heightDivisor:   0.25,
+                    strength:        0.3,
+                }}
+            />
+
             <mesh
                 ref={planeRef}
                 position={PLANE_POS.toArray()}
