@@ -16,5 +16,6 @@ export default create(() => {
             if (state.phase === 'running')
                 this.setState({phase: 'ended'})
         }
+
     }
 })
