@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState, forwardRef, useImperativeHandle } from "react";
+import { useRef, useEffect, useMemo, useState, forwardRef } from "react";
 import { RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
@@ -39,13 +39,11 @@ function useSmoothCamera(bodyApi, {
 // -----------------------------------------------------------------------------
 // Player Component
 // -----------------------------------------------------------------------------
-const Player = forwardRef(function Player(props, ref) {
+const Player = forwardRef((props, reference) => {
     // Refs & state
     const momentum     = useRef(new THREE.Vector3());
     const prevSector   = useRef(0);                   // track last 8-sector index
     const meshRef      = useRef();
-    const bodyRef      = useRef();
-
     const [ , getKeys] = useKeyboardControls();
     const { world: rapierWorld } = useRapier();
 
@@ -127,22 +125,17 @@ const Player = forwardRef(function Player(props, ref) {
     */
 
     // Attach smooth camera
-    useSmoothCamera(bodyRef.current, {
+    useSmoothCamera(reference.current, {
         cameraFollowing,
         cameraOffsetY,
         cameraOffsetZ,
         cameraTargetOffsetY,
         cameraLerpFactor
     })
-    useImperativeHandle(ref, () => ({
-        translation: () => bodyRef.current?.translation?.(),
-        linvel:      () => bodyRef.current?.linvel?.(),
-        api:         bodyRef.current,
-    }))
 
     // Main update loop
     useFrame((_, delta) => {
-        const body = bodyRef.current;
+        const body = reference.current;
         if (!body) return;
 
         // 1) Read input & build raw direction vector
@@ -207,13 +200,12 @@ const Player = forwardRef(function Player(props, ref) {
 
     return (
         <RigidBody
-            ref={bodyRef}
+            ref={reference}
             colliders={false}
             canSleep={false}
             position={[0, 25, 0]}
             type="dynamic"
             enabledRotations={[false, false, false]}
-            {...props}
         >
             <CapsuleCollider args={[capsuleHalfHeight, capsuleRadius]} />
             <primitive
