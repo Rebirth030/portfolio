@@ -4,8 +4,8 @@ import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useControls, folder } from "leva";
 import * as THREE from "three/webgpu";
-import {mrt, uniform, output} from "three/tsl";
 import buildNodeMaterialFromExisting from "../materials/buildNodeMaterialFromExisting.js";
+import { LAYERS } from "../physics/layers.js";
 
 const UP_VECTOR = new THREE.Vector3(0, 1, 0);
 
@@ -46,7 +46,7 @@ const Player = forwardRef(function Player(props, ref) {
     const meshRef      = useRef();
     const bodyRef      = useRef();
     const [ , getKeys] = useKeyboardControls();
-    const { world: rapierWorld } = useRapier();
+    useRapier();
 
     useImperativeHandle(ref, () => ({
         translation: () => bodyRef.current?.translation?.(),
@@ -213,6 +213,7 @@ const Player = forwardRef(function Player(props, ref) {
             position={[0, 25, 0]}
             type="dynamic"
             enabledRotations={[false, false, false]}
+            collisionGroups={{ memberships: LAYERS.PLAYER, filters: LAYERS.TERRAIN | LAYERS.DEFAULT }}
         >
             <CapsuleCollider args={[capsuleHalfHeight, capsuleRadius]} />
             <primitive

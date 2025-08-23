@@ -8,8 +8,13 @@ export function useTerrainAssets() {
   const noiseTex = useLoader(THREE.TextureLoader, '/noiseTexture.png')
   const heightMapTex = useLoader(THREE.TextureLoader, '/Heightmap.png')
   const terrainPathTex = useLoader(THREE.TextureLoader, '/TerrainColoring0000.png')
-  terrainPathTex.wrapS = terrainPathTex.wrapT = THREE.RepeatWrapping
-  ;[terrainMapTex, noiseTex].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping })
+  // Wrapping
+  ;[terrainMapTex, terrainPathTex, noiseTex].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping })
   heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping
+  // ColorSpace
+  terrainMapTex.colorSpace = THREE.SRGBColorSpace
+  terrainPathTex.colorSpace = THREE.SRGBColorSpace
+  noiseTex.colorSpace = THREE.LinearSRGBColorSpace
+  heightMapTex.colorSpace = THREE.LinearSRGBColorSpace
   return { nodes, terrainMapTex, noiseTex, heightMapTex, terrainPathTex }
 }

@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { HeightfieldCollider } from '@react-three/rapier'
 import * as THREE from 'three/webgpu'
+import { LAYERS } from '../../physics/layers.js'
 
 export default function TerrainPhysics() {
+  const { nodes } = useGLTF('/PortfolioTerrain.glb', true)
   const { heights, widthSegs, maxX, minX, maxZ, minZ } = useMemo(() => {
-    const { nodes } = useGLTF('/PortfolioTerrain.glb', true)
     const mesh = nodes.Plane
     const posAttr = mesh.geometry.attributes.position
     const total = posAttr.count
@@ -32,7 +33,7 @@ export default function TerrainPhysics() {
       heights[idx] = y
     }
     return { heights, widthSegs, maxX, minX, maxZ, minZ }
-  }, [])
+  }, [nodes])
 
   return (
     <HeightfieldCollider
@@ -41,6 +42,7 @@ export default function TerrainPhysics() {
       position={[0, -20, 0]}
       rotation={[0, 0, 0]}
       friction={1.5}
+      collisionGroups={{ memberships: LAYERS.TERRAIN, filters: LAYERS.PLAYER | LAYERS.DEFAULT }}
     />
   )
 }

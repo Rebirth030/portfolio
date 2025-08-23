@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import {
     uv, texture, positionWorld, time,
     uniform, clamp, smoothstep, abs, normalize, length, mix, dot,

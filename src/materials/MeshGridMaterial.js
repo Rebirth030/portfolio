@@ -1,4 +1,4 @@
-import {clamp, smoothstep, If, color, Fn, uniform, vec3, vec4, positionWorld, normalWorld, mix, vec2, uv} from "three/tsl";
+import {clamp, smoothstep, If, color, Fn, uniform, vec3, vec4, positionWorld, positionLocal, normalWorld, mix, vec2, uv} from "three/tsl";
 import {MeshBasicNodeMaterial} from "three/webgpu";
 import {Color} from "three";
 import * as THREE from "three/webgpu";

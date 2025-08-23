@@ -1,15 +1,15 @@
 import './style.css';
-import {createRoot} from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 import * as THREE from 'three/webgpu'
 
-import {Canvas} from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { Physics } from '@react-three/rapier'
 import Game from './app/Game.jsx'
-import {StrictMode, Suspense,} from "react";
-import {Leva} from 'leva'
-import {Perf} from 'r3f-perf'
-import {KeyboardControls, StatsGl} from "@react-three/drei";
-import GpuTimestampResolver from "./components/GpuTimestampResolver.jsx";
+import { StrictMode, Suspense } from 'react'
+import { Leva } from 'leva'
+import { Perf } from 'r3f-perf'
+import { KeyboardControls, StatsGl, OrbitControls } from '@react-three/drei'
+import GpuTimestampResolver from './app/GpuTimestampResolver.jsx'
 
 
 
@@ -45,10 +45,12 @@ createRoot(document.getElementById('root')).render(
                     <Physics debug={false} updateLoop="follow" timestep="fixed">
                         <Game />
                     </Physics>
-                    <GpuTimestampResolver/>
-                    <StatsGl trackGPU/>
+                    <GpuTimestampResolver />
+                    <StatsGl trackGPU />
+                    <Perf position="top-left" />
+                    <OrbitControls />
                 </Canvas>
             </KeyboardControls>
         </StrictMode>
     </Suspense>
-)
+);

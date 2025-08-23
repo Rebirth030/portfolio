@@ -4,10 +4,10 @@ import { createSpruceTopMesh } from './SpruceTreeTop.jsx'
 import { folder, useControls } from 'leva'
 
 export default function InstancedTrees() {
-  const { bushColorHex } = useControls('Terrain Material', {
+  useControls('Terrain Material', {
     Colors: folder({ bushColorHex: { value: '#61803e' } }, { collapsed: true })
   }, { collapsed: true })
-  const spruceMesh = useMemo(() => createSpruceTopMesh(), [bushColorHex])
+  const spruceMesh = useMemo(() => createSpruceTopMesh(), [])
   return (
     <>
       <InstancedFromRefs
