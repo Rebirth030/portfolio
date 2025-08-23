@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { folder, useControls } from 'leva';
-import { buildWindOffsetNode } from '../utils/wind.js';
+import { buildWindOffsetNode } from '../../utils/wind.js';
 
 export default function InfiniteGrass({ playerRef }) {
     // UI controls

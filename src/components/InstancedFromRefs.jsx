@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
 import { useLoader } from '@react-three/fiber'
 import { useMemo, useLayoutEffect, useEffect, useRef } from 'react'
-import buildNodeMaterialFromExisting from '../materials/buildNodeMaterialFromExisting.js'
+import buildNodeMaterialFromExisting from '../utils/buildNodeMaterialFromExisting.js'
 
 // TSL (für optionalen Wind, nur fürs Material)
 import { positionWorld, positionLocal } from 'three/tsl'
