@@ -1,3 +1,4 @@
+
 import { useRef } from 'react';
 import Environment from '../environment/Environment.jsx';
 import Player from '../player/Player.jsx';
@@ -9,6 +10,10 @@ export default function Game() {
     <>
       <Environment playerRef={playerRef} />
       <Player ref={playerRef} />
+  return (
+    <>
+      <Environment />
+      <Player />
       <Postprocessing />
     </>
   );

@@ -45,6 +45,7 @@ const Player = forwardRef(function Player(props, ref) {
     const prevSector   = useRef(0);                   // track last 8-sector index
     const meshRef      = useRef();
     const bodyRef      = useRef();
+
     const [ , getKeys] = useKeyboardControls();
     const { world: rapierWorld } = useRapier();
 
@@ -133,7 +134,6 @@ const Player = forwardRef(function Player(props, ref) {
         cameraTargetOffsetY,
         cameraLerpFactor
     })
-
     useImperativeHandle(ref, () => ({
         translation: () => bodyRef.current?.translation?.(),
         linvel:      () => bodyRef.current?.linvel?.(),

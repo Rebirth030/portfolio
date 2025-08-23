@@ -42,6 +42,7 @@ createRoot(document.getElementById('root')).render(
                     }}
                 >
                     <Physics debug={false} updateLoop="follow" timestep="fixed">
+                    <Physics>
                         <Game/>
                     </Physics>
                     <GpuTimestampResolver/>
