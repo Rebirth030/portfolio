@@ -1,11 +1,11 @@
-import { useRef, useEffect, useMemo, useState, forwardRef } from "react";
+import { useRef, useEffect, useMemo, useState, forwardRef, useImperativeHandle } from "react";
 import { RigidBody, CapsuleCollider, useRapier } from "@react-three/rapier";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useControls, folder } from "leva";
 import * as THREE from "three/webgpu";
 import {mrt, uniform, output} from "three/tsl";
-import buildNodeMaterialFromExisting from "../utils/buildNodeMaterialFromExisting.js";
+import buildNodeMaterialFromExisting from "../materials/buildNodeMaterialFromExisting.js";
 
 const UP_VECTOR = new THREE.Vector3(0, 1, 0);
 
@@ -39,11 +39,12 @@ function useSmoothCamera(bodyApi, {
 // -----------------------------------------------------------------------------
 // Player Component
 // -----------------------------------------------------------------------------
-const Player = forwardRef((props, reference) => {
+const Player = forwardRef(function Player(props, ref) {
     // Refs & state
     const momentum     = useRef(new THREE.Vector3());
     const prevSector   = useRef(0);                   // track last 8-sector index
     const meshRef      = useRef();
+    const bodyRef      = useRef();
     const [ , getKeys] = useKeyboardControls();
     const { world: rapierWorld } = useRapier();
 
@@ -125,7 +126,7 @@ const Player = forwardRef((props, reference) => {
     */
 
     // Attach smooth camera
-    useSmoothCamera(reference.current, {
+    useSmoothCamera(bodyRef.current, {
         cameraFollowing,
         cameraOffsetY,
         cameraOffsetZ,
@@ -133,9 +134,15 @@ const Player = forwardRef((props, reference) => {
         cameraLerpFactor
     })
 
+    useImperativeHandle(ref, () => ({
+        translation: () => bodyRef.current?.translation?.(),
+        linvel:      () => bodyRef.current?.linvel?.(),
+        api:         bodyRef.current,
+    }))
+
     // Main update loop
     useFrame((_, delta) => {
-        const body = reference.current;
+        const body = bodyRef.current;
         if (!body) return;
 
         // 1) Read input & build raw direction vector
@@ -200,12 +207,13 @@ const Player = forwardRef((props, reference) => {
 
     return (
         <RigidBody
-            ref={reference}
+            ref={bodyRef}
             colliders={false}
             canSleep={false}
             position={[0, 25, 0]}
             type="dynamic"
             enabledRotations={[false, false, false]}
+            {...props}
         >
             <CapsuleCollider args={[capsuleHalfHeight, capsuleRadius]} />
             <primitive
