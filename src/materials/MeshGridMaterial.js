@@ -2,11 +2,7 @@ import {clamp, smoothstep, If, color, Fn, uniform, vec3, vec4, positionWorld, no
 import {MeshBasicNodeMaterial} from "three/webgpu";
 import {Color} from "three";
 import * as THREE from "three/webgpu";
-
-
-
-
-
+import { Fn, vec3, vec2, mix, If, positionLocal } from 'three/tsl'
 
 const toMask = Fn(([ normal ]) =>
 {

@@ -3,12 +3,12 @@ import {createRoot} from 'react-dom/client'
 import * as THREE from 'three/webgpu'
 
 import {Canvas} from '@react-three/fiber'
-import Game from './components/Game.jsx'
+import Game from './app/Game.jsx'
 import {StrictMode, Suspense,} from "react";
 import {Leva} from 'leva'
-import {Perf} from 'r3f-perf'
 import {KeyboardControls, StatsGl} from "@react-three/drei";
-import GpuTimestampResolver from "./components/GpuTimestampResolver.jsx";
+import { Physics } from '@react-three/rapier'
+import GpuTimestampResolver from "./app/GpuTimestampResolver.jsx";
 
 
 
@@ -41,7 +41,9 @@ createRoot(document.getElementById('root')).render(
                         position: [2.5, 4, 6]
                     }}
                 >
-                    <Game/>
+                    <Physics debug={false} updateLoop="follow" timestep="fixed">
+                        <Game />
+                    </Physics>
                     <GpuTimestampResolver/>
                     <StatsGl trackGPU/>
                 </Canvas>

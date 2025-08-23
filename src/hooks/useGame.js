@@ -1,21 +1,16 @@
-import {create} from "zustand";
+import { create } from 'zustand'
 
-export default create(() => {
-    return {
-        phase: 'ready',
+export default create((set, get) => ({
+  phase: 'ready',
 
-        start: () => {
-            if (state.phase === 'ready')
-                this.setState({phase: 'running'})
-        },
-        reload: () => {
-            if (state.phase === 'running' || state.phase === 'ended')
-                this.setState({phase: 'ready'})
-        },
-        final : () => {
-            if (state.phase === 'running')
-                this.setState({phase: 'ended'})
-        }
-
-    }
-})
+  start: () => {
+    if (get().phase === 'ready') set({ phase: 'running' })
+  },
+  reload: () => {
+    const p = get().phase
+    if (p === 'running' || p === 'ended') set({ phase: 'ready' })
+  },
+  final: () => {
+    if (get().phase === 'running') set({ phase: 'ended' })
+  },
+}))

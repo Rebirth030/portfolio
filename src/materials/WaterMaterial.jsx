@@ -1,7 +1,7 @@
 import {
     uv, texture, positionWorld, time,
     uniform, clamp, smoothstep, abs, normalize, length, mix, dot,
-    vec2, vec3, sub, mul, add, mod
+    vec2, vec3, sub, mul
 } from 'three/tsl'
 import { useLoader } from '@react-three/fiber'
 import * as THREE from 'three/webgpu'
@@ -36,14 +36,14 @@ export default function WaterMaterial(minBlue, maxBlue) {
     const grad  = vec2( blueR.sub(blueL).mul(0.5), blueU.sub(blueD).mul(0.5) )
 
     // Tangente (90° Drehung) = Flussrichtungskandidat
-    let tangent = vec2( grad.y.mul(-1.0), grad.x )
+    let _tangent = vec2( grad.y.mul(-1.0), grad.x )
     // Fallback mischen, wenn Gradient zu klein ist (verhindert „Einfrieren“)
     const gAmp     = clamp( length(grad).mul(200.0), 0.0, 1.0 ) // Gain tweaken
     const fallback = vec2(0.0, 1.0)
-    tangent = normalize( mix(fallback, tangent, gAmp) )
+    _tangent = normalize( mix(fallback, _tangent, gAmp) )
 
     // optional: Flussrichtung invertieren, falls „falsch herum“
-    const uFlipFlow = uniform(1.0) // +1 normal, -1 invertiert
+    const _uFlipFlow = uniform(1.0) // +1 normal, -1 invertiert
     const flowDir = normalize(vec2(uniform(0.0), uniform(1.0))) // z.B. +Z
     const flowPhase = dot(flowDir, positionWorld.xz).mul(uniform(0.25))
 
@@ -64,7 +64,7 @@ export default function WaterMaterial(minBlue, maxBlue) {
     // --- Strömung:
     // 1) t NICHT advecten → bleibt stabiles Abstandsfeld
     // 2) Phase entlang flowDir verschieben (sichtbare „Fließ“-Bewegung)
-    const phaseAdvect = dot(flowDir, positionWorld.xz).mul(uAdvectPhaseSpeed)
+    const _phaseAdvect = dot(flowDir, positionWorld.xz).mul(uAdvectPhaseSpeed)
 
     // 3) Noise entlang flowDir verschieben, um „Fetzen“ mitzunehmen
     const noiseUV = positionWorld.xz
