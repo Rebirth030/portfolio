@@ -41,7 +41,6 @@ createRoot(document.getElementById('root')).render(
                         position: [2.5, 4, 6]
                     }}
                 >
-                    <Physics debug={false} updateLoop="follow" timestep="fixed">
                     <Physics>
                         <Game/>
                     </Physics>
