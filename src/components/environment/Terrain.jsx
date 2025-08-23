@@ -13,20 +13,28 @@ import createBushMesh from "./Bush.jsx";
 import {createSpruceTopMesh} from "./SpruceTreeTop.jsx";
 
 export default function Terrain() {
+    const bridge = useGLTF('Models.glb', true)
+    const bridgeMesh = useMemo(() => bridge.scene.children[0], [bridge])
     // ---------------- Controls ----------------
     const {
         darkGreenHex, sandHex, lightBlueHex, darkBlueHex,bushColorHex,
         t1Min, t1Max, t2Min, t2Max, t3Min, t3Max,
         waterMax, waterMin, minBlue, maxBlue,
         slopeFrequency, timeSpeed, noiseFreq, noiseStrength, lineWidth,
-        bandStart, bandEnd, bandFeather
+        bandStart, bandEnd, bandFeather,
+        pathMin, pathMax, pathFeather, pathNoiseFreq, pathNoiseAmp, pathCenterDark, pathEdgeGreen, pathRoughness,
+        pathBaseHex, pathDustHex, pathWetHex,
     } = useControls('Terrain Material', {
         Colors: folder({
             darkGreenHex: { value: '#426f48' },
             sandHex:      { value: '#dab984' },
             lightBlueHex: { value: '#66b0af' },
             darkBlueHex:  { value: '#284159' },
-            bushColorHex: { value: '#61803e' }
+            bushColorHex: { value: '#61803e' },
+            pathBaseHex: { value: '#65573e' },
+            pathDustHex: { value: '#867758' },
+            pathWetHex:  { value: '#382c1e' },
+
         }, { collapsed: true }),
         Thresholds: folder({
             t1Min: { value: 0.18, min: 0, max: 1, step: 0.01 },
@@ -49,6 +57,16 @@ export default function Terrain() {
             bandStart:      { value: 0.00, min: 0, max: 0.9, step: 0.01 },
             bandEnd:        { value: 0.73, min: 0.1, max: 2, step: 0.01 },
             bandFeather:    { value: 0.29, min: 0.0, max: 0.5, step: 0.005 },
+        }, { collapsed: true }),
+        Path: folder({
+            pathMin:        { value: 0.00, min: 0,   max: 1,   step: 0.01 }, // Rot-Schwelle Start
+            pathMax:        { value: 0.95, min: 0,   max: 1,   step: 0.01 }, // Rot-Schwelle Ende
+            pathFeather:    { value: 0.39, min: 0.0, max: 0.5, step: 0.005 },// Kantenbreite
+            pathNoiseFreq:  { value: 0.03, min: 0.005, max: 0.1, step: 0.001 },
+            pathNoiseAmp:   { value: 0.48,  min: 0.0,   max: 0.6, step: 0.01 },
+            pathCenterDark: { value: 0.39,  min: 0.0,   max: 0.6, step: 0.01 }, // Abdunklung mittig
+            pathEdgeGreen:  { value: 0.50,  min: 0.0,   max: 0.6, step: 0.01 }, // grünlicher Rand
+            pathRoughness:  { value: 0.85,  min: 0.3,   max: 1.0, step: 0.01 }  // etwas glatter als Wiese
         }, { collapsed: true })
     }, { collapsed: true })
 
@@ -60,9 +78,11 @@ export default function Terrain() {
     const uvScale  = new THREE.Vector2(1 / 256, 1 / 256)
 
     // ---------------- Texturen (einmal laden) ----------------
-    const terrainMapTex = useLoader(THREE.TextureLoader, '/TerrainMap.png')
+    const terrainMapTex = useLoader(THREE.TextureLoader, '/TerrainColoring0000.png')
     const noiseTex      = useLoader(THREE.TextureLoader, '/noiseTexture.png')
     const heightMapTex  = useLoader(THREE.TextureLoader, '/Heightmap.png')
+    const terrainPathTex = useLoader(THREE.TextureLoader, '/TerrainColoring0000.png')
+    terrainPathTex.wrapS = terrainPathTex.wrapT = THREE.RepeatWrapping
     ;[terrainMapTex, noiseTex].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping })
     heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping
 
@@ -85,17 +105,55 @@ export default function Terrain() {
         const c2        = mix(c1, uLightB, mul(m2, waterMask))
 
         const m3  = smoothstep(t3Min, t3Max, blue)
-        const col = mix(c2, uDarkB, m3)
+        let col = mix(c2, uDarkB, m3)
 
+        // ---- NEU: Pfadfarbe aus Terrainpathway (Rot) ----
+        const red = texture(terrainPathTex, vec2(uvNode.x, sub(1, uvNode.y))).r
+
+        // weiche Maske (Band) zwischen pathMin..pathMax
+        const pathMask = smoothstep(pathMin, add(pathMin, pathFeather), red);
+
+        // großflächige Boden-Variation
+        const pNoiseUV = positionWorld.xz.mul(pathNoiseFreq)
+        const pNoise   = texture(noiseTex, pNoiseUV).r.sub(0.5).mul(2.0).mul(pathNoiseAmp)
+
+        // Grundtöne für realistischen, verdichteten Boden
+        const pathBase    = new THREE.Color(pathBaseHex)   // trockene Erde / Kies
+        const pathDust    = new THREE.Color(pathDustHex)   // staubige Aufhellungen
+        const pathWet     = new THREE.Color(pathWetHex)   // dunkler, feuchter Ton
+
+        // Zentrum etwas dunkler, Ränder leicht sandig/oliv (Einbindung ins Gras)
+        // 'core' steigt zum Pfad-Zentrum (red→1), 'edge' wirkt intensiver an den Rändern
+        const core = smoothstep(0.4, 0.95, red)                 // Mitte
+        const edge = sub(1.0, smoothstep(0.55, 0.95, red))      // Randzone
+
+        // Farbmischung: Basis -> (Dust am Rand) -> (Wet im Kern)
+        let pathCol = mix(pathBase, pathDust, edge)              // Rand wird etwas heller/sandiger
+        pathCol     = mix(pathCol,  pathWet,  mul(core, pathCenterDark)) // Kern etwas dunkler/feuchter
+
+        // dezente Noise-Modulation (Helligkeit)
+        pathCol     = pathCol.mul(add(1.0, pNoise))
+
+        // Grünzug am Rand mischen, damit’s organisch ins Gras läuft
+        const greenEdge = mix(pathCol, uDarkG, mul(edge, pathEdgeGreen))
+
+        // finale Pfadfarbe (Rand-Integration + Kern-Dunkelung)
+        const finalPath = mix(pathCol, greenEdge, 0.5)
+
+        // auf Terrain auflegen
+        col = mix(col, finalPath, pathMask)
+
+        // ---- Material ----
         const mat = new THREE.MeshStandardNodeMaterial()
-        mat.colorNode = col
-        mat.roughnessNode = 1.0
-        mat.metalnessNode = 0
+        mat.colorNode     = col
+        mat.roughnessNode = mix(1.0, pathRoughness, pathMask)
+        mat.metalnessNode = 0.0
         return mat
     }, [
-        terrainMapTex,
-        darkGreenHex, sandHex, lightBlueHex, darkBlueHex,
-        t1Min, t1Max, t2Min, t2Max, t3Min, t3Max, waterMin, waterMax
+        terrainMapTex, terrainPathTex, noiseTex,
+        darkGreenHex, sandHex, lightBlueHex, darkBlueHex,pathBaseHex, pathDustHex, pathWetHex,
+        t1Min, t1Max, t2Min, t2Max, t3Min, t3Max, waterMin, waterMax,
+        pathMin, pathMax, pathFeather, pathNoiseFreq, pathNoiseAmp, pathCenterDark, pathEdgeGreen, pathRoughness
     ])
 
     // ---------------- Water-Uniform-Nodes (stabil) ----------------
@@ -207,6 +265,14 @@ export default function Terrain() {
 
     return (
         <>
+            <RigidBody
+                colliders={"trimesh"}
+                type="fixed"
+                friction={1.5}
+                position={[0,-20,0]}
+            >
+            <primitive object={bridgeMesh}/>
+            </RigidBody>
             <InstancedFromRefs
                 modelUrl="/OakTreeStem.glb"         // Detail-Baum (ein Mesh, ein Material bevorzugt)
                 refsUrl="/OakTreeInstances.glb"       // Dummies/Empties mit Transforms
