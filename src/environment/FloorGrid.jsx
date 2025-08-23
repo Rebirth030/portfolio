@@ -1,7 +1,7 @@
 import {useControls} from "leva";
 import * as THREE from "three/webgpu";
 import {color, rangeFog, uniform, rangeFogFactor, fog} from "three/tsl";
-import MeshGridMaterial, {MeshGridMaterialLine} from "../../materials/MeshGridMaterial.js";
+import MeshGridMaterial, {MeshGridMaterialLine} from "../materials/MeshGridMaterial.js";
 import {RigidBody} from "@react-three/rapier";
 import {useGLTF} from "@react-three/drei";
 import {useRef} from "react";
