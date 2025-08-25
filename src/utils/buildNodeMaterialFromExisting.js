@@ -12,10 +12,11 @@ export default function buildNodeMaterialFromExisting(oldMaterial) {
     nodeMaterial.emissiveIntensity = 0
     nodeMaterial.emissive = null
 
-    if (oldMaterial.name == "Emission.001") {
+    if (oldMaterial.name.includes("Emission")){
         nodeMaterial.emissive = oldMaterial.emissive?.clone() ?? new THREE.Color(0xff0000);
         nodeMaterial.emissiveIntensity = 10;
-        nodeMaterial.emissive = new THREE.Color(0xffffff)
+        console.log(oldMaterial)
+        nodeMaterial.emissive = oldMaterial.emissive
     }
 
     nodeMaterial.map = oldMaterial.map ?? null;

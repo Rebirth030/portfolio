@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { folder, useControls } from 'leva';
-import { buildWindOffsetNode } from '../../utils/wind.js';
+import { buildWindOffsetNode } from '../utils/wind.js';
 
 export default function InfiniteGrass({ playerRef }) {
     // UI controls
@@ -21,8 +21,8 @@ export default function InfiniteGrass({ playerRef }) {
     } = useControls('Infinite Grass', {
         Gras: folder({
             gridSize: { value: 510, min: 10, max: 1000, step: 10 },
-            gridOffsetZ: { value: -15, min: -15, max: 0, step: 1 },
-            scaleX: { value: 1.6, min: 0.1, max: 10, step: 0.1 },
+            gridOffsetZ: { value: -21, min: -50, max: 0, step: 1 },
+            scaleX: { value: 1.9, min: 0.1, max: 10, step: 0.1 },
             scaleZ: { value: 0.9, min: 0.1, max: 10, step: 0.1 },
             spacing: { value: 0.11, min: 0.01, max: 1, step: 0.01 },
             bladeHeight: { value: 0.42, min: 0.05, max: 1, step: 0.01 },
@@ -57,6 +57,10 @@ export default function InfiniteGrass({ playerRef }) {
     const heightMapTex = useLoader(THREE.TextureLoader, '/Heightmap.png');
     const terrainMapTex = useLoader(THREE.TextureLoader, '/TerrainColoring0000.png');
     const terrainPathTex = useLoader(THREE.TextureLoader, '/TerrainColoring0000.png');
+    const fogMaskTex = useLoader(THREE.TextureLoader, '/AlphaMap.png')
+    fogMaskTex.wrapS = fogMaskTex.wrapT = THREE.RepeatWrapping
+    fogMaskTex.colorSpace = THREE.NoColorSpace
+    fogMaskTex.flipY = false
     noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping;
     heightMapTex.wrapS = heightMapTex.wrapT = THREE.ClampToEdgeWrapping;
     terrainMapTex.wrapS = terrainMapTex.wrapT = THREE.RepeatWrapping;
@@ -164,9 +168,16 @@ export default function InfiniteGrass({ playerRef }) {
     const right = normalize(vec3(toBlade.z, 0, negate(toBlade.x)));
     const up = vec3(0, 1, 0);
 
+    const fogR = texture(fogMaskTex, uv).r  // 1 = behalten, 0 = ausfaden
+// optional weichzeichnen:
+    const fogFade = smoothstep(0.02, 0.98, fogR)
+
+// in deine bestehende Kombi-Skalierung integrieren:
+    const sizeFactorWithFog = mul(sizeFactor, fogFade)
+
     const scaledOffset = vec3(
-        offsetNode.x.mul(sizeFactor),
-        offsetNode.y.mul(sizeFactor),
+        offsetNode.x.mul(sizeFactorWithFog),
+        offsetNode.y.mul(sizeFactorWithFog),
         0
     );
 
@@ -223,6 +234,10 @@ export default function InfiniteGrass({ playerRef }) {
     });
     mat.positionNode = finalPos;
     mat.colorNode = finalColor;
+    mat.opacityNode  = fogFade
+    mat.alphaTest    = 0.15
+    mat.transparent  = false
+    mat.depthWrite   = true
 
     const mesh = new THREE.Mesh(geometry, mat);
     mesh.frustumCulled = false;
