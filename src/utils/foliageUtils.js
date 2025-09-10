@@ -1,28 +1,169 @@
-// foliageUtils.js
+// utils/foliageUtils.js
 import * as THREE from 'three'
 import { MeshPhysicalNodeMaterial } from 'three/webgpu'
 import {
-    texture, uv, smoothstep, float, vec3,
-    normalize, normalWorld, saturate, dot, mul
+    texture, uv, screenUV, screenSize,
+    vec2, vec3, float, uniform,
+    add, sub, mul, clamp, length, smoothstep,
+    normalize, normalWorld, saturate, dot,
+    abs, dFdx, dFdy, max
 } from 'three/tsl'
 
-// Non-Color Alpha-Map laden
-export function loadAlphaMap(url) {
+// Linearer Loader für Masken/SDFs (keine Farbraumkonvertierung)
+export function loadMaskTexture(url) {
     const tex = new THREE.TextureLoader().load(url)
     tex.colorSpace = THREE.NoColorSpace
     tex.flipY = false
+    tex.minFilter = THREE.LinearMipMapLinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.wrapS = THREE.ClampToEdgeWrapping
+    tex.wrapT = THREE.ClampToEdgeWrapping
     return tex
 }
 
-// sRGB → Linear + ACES-freundliche Dämpfung
+// sRGB → linear + leichte ACES-Dämpfung
 export function baseLinearColor(hex, acesMul = 0.75) {
     return new THREE.Color(hex).convertSRGBToLinear().multiplyScalar(acesMul)
 }
 
-// Standard-Leaf-Material: PBR + AlphaTest + leichtes Backlight
-export function createLeafMaterial({ alphaMap, baseLin, backlight = 0.16, sunDir = new THREE.Vector3(0, 1, 0) }) {
-    const a = texture(alphaMap, uv()).x
-    const alphaSoft = smoothstep(float(0.35), float(0.65), a)
+/* -------------------------------------------------------------
+   Interner Helfer: SDF-Coverage aus Alpha-Kanal (0..1, Isolinie ~0.5)
+   - thresholdNode: TSL-Node (float)
+   - softnessNode : TSL-Node (float), skaliert fwidth-ähnliche Breite
+------------------------------------------------------------- */
+function sdfCoverageAlphaChannel(sdfTexture, thresholdNode, softnessNode) {
+    const s4 = texture(sdfTexture, uv())
+    const sdf01 = s4.a
+
+    // fwidth ≈ |dFdx| + |dFdy|, mit Schutz vor 0
+    const ddx = abs(dFdx(sdf01))
+    const ddy = abs(dFdy(sdf01))
+    const fw  = max(add(ddx, ddy), float(1.0 / 2048.0))
+
+    const spread = mul(softnessNode, fw) // skalenrobuste Kantenbreite
+    return smoothstep(sub(thresholdNode, spread), add(thresholdNode, spread), sdf01)
+}
+
+/* -------------------------------------------------------------
+   SDF-basiertes Blattmaterial mit Screen-Fade (Mitte → außen).
+   - SDF liegt im Alpha-Kanal
+   - Depth-stabil via alphaTest (kein Blending)
+   - Kanten-AA skalenrobust (fwidth-Äquivalent)
+------------------------------------------------------------- */
+export function createTreeLeafMaterialSDF({
+                                                          // Texturen
+                                                          sdfUrl,                           // z. B. '/bushLeaves_sdf.png' – SDF-Isolinie ~ 0.5
+                                                          screenNoiseUrl = null,            // optionales Noise für organischen Fade-Rand
+
+                                                          // Shading/Albedo
+                                                          baseLin,                          // THREE.Color (linear) – Backlight-Ton
+                                                          backlight = 0.16,
+                                                          sunDir = new THREE.Vector3(0, 1, 0),
+
+                                                          // Cutout/AA
+                                                          initialThreshold = 0.50,          // ~ SDF-Isolinie
+                                                          softness = 1.0,                   // skaliert fwidth-basierte Breite
+                                                          alphaTest = 0.5,                  // depth-stabiler Cut
+
+                                                          // Screen-Fade (Zentrum → außen)
+                                                          innerRadius = 0.10,
+                                                          outerRadius = 0.22,
+                                                          fadeStrength = 1.0                // 0..1
+                                                      } = {}) {
+    // --- Texturen laden ---
+    const sdfTex = loadMaskTexture(sdfUrl)
+    const noiseTex = screenNoiseUrl ? loadMaskTexture(screenNoiseUrl) : null
+    if (noiseTex) {
+        noiseTex.wrapS = noiseTex.wrapT = THREE.RepeatWrapping
+    }
+
+    // --- Uniforms (GUI-freundlich) ---
+    const uThreshold = uniform(initialThreshold)
+    const uSoftness  = uniform(softness)
+    const uFadeStr   = uniform(fadeStrength)
+    const uInnerR    = uniform(innerRadius)
+    const uOuterR    = uniform(outerRadius)
+    const uBacklight = uniform(backlight)
+
+    // --- Screen-Fade (aspect-korrigiert) ---
+    const aspect = screenSize.x.div(screenSize.y)
+    const toC = sub(screenUV, vec2(0.5, 0.5)).toVar()
+    toC.x.mulAssign(aspect)
+    let dist = length(toC) // 0 in der Mitte, größer nach außen
+
+    // Optional organischer Rand
+    if (noiseTex) {
+        const rimFreq = float(3.0)
+        const rimStr  = float(0.15)
+        const n = texture(noiseTex, screenUV.mul(rimFreq)).r // 0..1
+        const offset = add(n, float(-0.5)).mul(rimStr)
+        dist = add(dist, offset)
+    }
+
+    // Fade-Maske 0..1 (1 = im Zentrum aktiv)
+    const fadeMask = clamp(
+        sub(float(1.0), smoothstep(uInnerR, uOuterR, dist)),
+        0.0, 1.0
+    )
+
+    // Effektiver Threshold: Basis → 1.0 je nach Fade-Maske
+    const mixAmt = mul(fadeMask, uFadeStr)
+    const thEff = add(
+        mul(uThreshold, sub(float(1.0), mixAmt)),
+        mul(float(1.0), mixAmt)
+    )
+
+    // --- SDF-Coverage (gemeinsamer Helfer) ---
+    const coverage = sdfCoverageAlphaChannel(sdfTex, thEff, uSoftness)
+
+    // --- PBR-Node-Material ---
+    const mat = new MeshPhysicalNodeMaterial({
+        metalness: 0,
+        roughness: 0.92,
+        sheen: 0.15,
+        sheenRoughness: 0.9,
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        envMapIntensity: 0.1,
+        opacityNode: coverage,    // depth-stabiler Cutout
+        transparent: false,
+        alphaTest
+    })
+
+    // Gegenlicht-Fake (als Uniform steuerbar)
+    const L = normalize(vec3(sunDir.x, sunDir.y, sunDir.z))
+    const N = normalize(normalWorld)
+    const back = saturate(dot(L.mul(float(-1)), N))
+    mat.emissiveNode = back.mul(uBacklight)
+        .mul(vec3(baseLin.r, baseLin.g, baseLin.b))
+
+    // Für GUI/Leva: Uniform-Referenzen im userData ablegen
+    mat.userData.leafSdfControls = {
+        uThreshold,
+        uSoftness,
+        uFadeStr,
+        uInnerR,
+        uOuterR,
+        uBacklight
+    }
+
+    return mat
+}
+
+export function createLeafMaterial({
+                                       sdfUrl,                            // SDF-Datei statt Alpha-Map
+                                       baseLin,
+                                       backlight = 0.16,
+                                       sunDir = new THREE.Vector3(0, 1, 0),
+                                       alphaTest = 0.5,
+                                       softness = 1.0                     // optional, Standard wie oben
+                                   } = {}) {
+    const sdfTex = loadMaskTexture(sdfUrl)
+
+    // Fester Threshold 0.5, skalenrobuste Kantenbreite
+    const th = float(0.5)
+    const uSoft = uniform(softness)
+    const coverage = sdfCoverageAlphaChannel(sdfTex, th, uSoft)
 
     const material = new MeshPhysicalNodeMaterial({
         metalness: 0,
@@ -32,9 +173,9 @@ export function createLeafMaterial({ alphaMap, baseLin, backlight = 0.16, sunDir
         vertexColors: true,
         side: THREE.DoubleSide,
         envMapIntensity: 0.1,
-        opacityNode: alphaSoft,
-        transparent: false,    // alphaTest genügt → saubere Depth
-        alphaTest: 0.5
+        opacityNode: coverage,
+        transparent: false,
+        alphaTest
     })
 
     // Backlight-Fake in Blattfarbe
@@ -47,6 +188,3 @@ export function createLeafMaterial({ alphaMap, baseLin, backlight = 0.16, sunDir
     return material
 }
 
-// Goldener Winkel für Ring-Versatz
-export const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
-export const ringAngleOffset = (i) => i * GOLDEN_ANGLE

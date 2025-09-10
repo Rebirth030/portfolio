@@ -25,6 +25,7 @@ createRoot(document.getElementById('root')).render(
                 <Canvas
                     gl={async (glProps) => {
                         const renderer = new THREE.WebGPURenderer(glProps)
+                        renderer.antialias = true
                         renderer.forceWebGL = false
                         renderer.toneMapping = THREE.ACESFilmicToneMapping
                         renderer.outputColorSpace = THREE.SRGBColorSpace

@@ -1,30 +1,33 @@
-// createSpruceTopMesh.js
+// components/trees/SpruceTreeTop.jsx
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { loadAlphaMap, baseLinearColor, createLeafMaterial, ringAngleOffset } from '../../utils/foliageUtils.js'
+import { baseLinearColor, createTreeLeafMaterialSDF } from '../../utils/foliageUtils.js'
 
-export function createSpruceTopMesh(opts = {}) {
-    const {
-        color = '#3b6f2a',
-        coneRadius = 1,
-        coneHeight = 5,
-        levels = 15,
-        perLevelBottom = 8,
-        perLevelTop = 3,
-        levelCurve = 1.5,
-        planeSizeBase = 1.5,
-        planeSizeFalloff = 0.65,
-        // Neigung zur Achse (unten → oben)
-        tiltAxisBottomDeg = 55,
-        tiltAxisTopDeg = 25,
-        randomJitter = 0.08,
-        backlight = 0.16,
-        alphaUrl = '/spruceLeaves.png'
-    } = opts
+export const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+export const ringAngleOffset = (i) => i * GOLDEN_ANGLE
 
-    const alphaMap = loadAlphaMap(alphaUrl)
-    const baseLin  = baseLinearColor(color)
+export function createSpruceTopMesh({
+                                        // Farb-/Form-Parameter des Kegels
+                                        color = '#3b6f2a',
+                                        coneRadius = 1,
+                                        coneHeight = 5,
+                                        levels = 15,
+                                        perLevelBottom = 8,
+                                        perLevelTop = 3,
+                                        levelCurve = 1.5,
 
+                                        // Ebenengrößen/Neigung
+                                        planeSizeBase = 1.5,
+                                        planeSizeFalloff = 0.65,
+                                        tiltAxisBottomDeg = 55,
+                                        tiltAxisTopDeg = 25,
+                                        randomJitter = 0.08,
+
+                                        // Assets
+                                        sdfUrl = '/spruceLeaves_sdf.png',
+                                        screenNoiseUrl = '/noiseTexture.png'
+                                    } = {}) {
+    const baseLin = baseLinearColor(color)
     const axisY = new THREE.Vector3(0, 1, 0)
     const geos = []
 
@@ -41,15 +44,13 @@ export function createSpruceTopMesh(opts = {}) {
         for (let pi = 0; pi < nThis; pi++) {
             const phi = phiBase + (pi / nThis) * Math.PI * 2
 
-            // Position mit leichtem Jitter
             const rr = Math.max(0.0001, rRing + rRing * randomJitter * (Math.random() - 0.5))
             const yy = y + coneHeight * randomJitter * 0.15 * (Math.random() - 0.5)
             const x = rr * Math.cos(phi)
             const z = rr * Math.sin(phi)
 
-            // lokales Dreibein (ex/ey/ez)
-            const rHat = new THREE.Vector3(x, 0, z).normalize()              // nach außen
-            const ex   = new THREE.Vector3().crossVectors(axisY, rHat).normalize() // Tangente
+            const rHat = new THREE.Vector3(x, 0, z).normalize()
+            const ex   = new THREE.Vector3().crossVectors(axisY, rHat).normalize()
             const theta = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(tiltAxisBottomDeg, tiltAxisTopDeg, t))
             const ey = new THREE.Vector3().copy(rHat).multiplyScalar(Math.sin(theta))
                 .addScaledVector(axisY, -Math.cos(theta)).normalize()
@@ -62,7 +63,7 @@ export function createSpruceTopMesh(opts = {}) {
             g.translate(x, yy, z)
             g.computeVertexNormals()
 
-            // realistischere Farben: innen dunkler, Spitzen wärmer; oben kühler
+            // Vertexfarben (Varianz)
             const vCount = g.attributes.position.count
             const colors = new Float32Array(vCount * 3)
             const baseHSL = { h: 0, s: 0, l: 0 }
@@ -75,23 +76,24 @@ export function createSpruceTopMesh(opts = {}) {
                 const py = g.attributes.position.getY(vi)
                 const pz = g.attributes.position.getZ(vi)
 
-                const h = THREE.MathUtils.clamp(py / coneHeight, 0, 1)
+                const h  = THREE.MathUtils.clamp(py / coneHeight, 0, 1)
                 const rN = THREE.MathUtils.clamp(Math.hypot(px, pz) / rMaxAtY, 0, 1)
 
-                const ao = 0.55 + 0.35 * rN + 0.10 * h
+                const ao       = 0.55 + 0.35 * rN + 0.10 * h
                 const hueShift = tipWarm * rN - skyTint * h
-                const hOut = THREE.MathUtils.clamp(baseHSL.h + hueShift, 0, 1)
-                const sOut = THREE.MathUtils.clamp(baseHSL.s + 0.25 * (rN - 0.5) - 0.08 * h, 0, 1)
-                const lOut = THREE.MathUtils.clamp(baseHSL.l * ao + (Math.random() - 0.5) * 0.02, 0, 1)
+                const hOut     = THREE.MathUtils.clamp(baseHSL.h + hueShift, 0, 1)
+                const sOut     = THREE.MathUtils.clamp(baseHSL.s + 0.25 * (rN - 0.5) - 0.08 * h, 0, 1)
+                const lOut     = THREE.MathUtils.clamp(baseHSL.l * ao + (Math.random() - 0.5) * 0.02, 0, 1)
 
                 const col = new THREE.Color().setHSL(
                     THREE.MathUtils.clamp(hOut + (Math.random() - 0.5) * 0.006, 0, 1),
                     THREE.MathUtils.clamp(sOut + (Math.random() - 0.5) * 0.03, 0, 1),
                     lOut
                 )
-                colors[vi * 3 + 0] = col.r
-                colors[vi * 3 + 1] = col.g
-                colors[vi * 3 + 2] = col.b
+                const off = vi * 3
+                colors[off + 0] = col.r
+                colors[off + 1] = col.g
+                colors[off + 2] = col.b
             }
             g.setAttribute('color', new THREE.BufferAttribute(colors, 3))
             geos.push(g)
@@ -102,13 +104,15 @@ export function createSpruceTopMesh(opts = {}) {
     geometry.computeBoundingSphere()
     geometry.computeBoundingBox()
 
-    const material = createLeafMaterial({
-        alphaMap,
-        baseLin,
-        backlight,
-        // Fichte: reicht meist von oben; Sie können hier auch Ihre Sonnenrichtung setzen
-        sunDir: new THREE.Vector3(0, 1, 0)
+    // Material mit Defaults; Runtime-Tuning via InstancedTrees (Leva)
+    const material = createTreeLeafMaterialSDF({
+        sdfUrl,
+        screenNoiseUrl,
+        baseLin
     })
 
-    return new THREE.Mesh(geometry, material)
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    return mesh
 }

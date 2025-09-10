@@ -19,7 +19,7 @@ export default function InstancedBushes() {
                 windScale1:      0.06,
                 windScale2:      0.055,
                 heightDivisor:   0.25,
-                strength:        0.3,
+                strength:        0.4,
             }}
         />
     )
