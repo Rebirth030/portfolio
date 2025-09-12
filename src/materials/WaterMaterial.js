@@ -1,7 +1,7 @@
 import {
     uv, texture, positionWorld, time,
     uniform, clamp, smoothstep, abs, normalize, length, mix, dot,
-    vec2, vec3, sub, mul, add, mod
+    vec2, vec3, sub, mul,
 } from 'three/tsl'
 import { useLoader } from '@react-three/fiber'
 import * as THREE from 'three/webgpu'
@@ -20,30 +20,6 @@ export default function WaterMaterial(minBlue, maxBlue) {
     const uMaxB     = uniform(maxBlue)
     const t         = clamp( blueC.sub(uMinB).div(uMaxB.sub(uMinB)), 0.0, 1.0 )
 
-    // --- korrekte Texelgröße (bitte an deine Map-Auflösung anpassen)
-    const texelU = 1 / (flowMap.image?.width  ?? 1024)
-    const texelV = 1 / (flowMap.image?.height ?? 1024)
-    const uTexelU = uniform(texelU)
-    const uTexelV = uniform(texelV)
-    const du = vec2(uTexelU, 0.0)
-    const dv = vec2(0.0, uTexelV)
-
-    // zentraler Differenzen-Gradient ∇blue
-    const blueR = texture(flowMap, terrainUv.add(du)).b
-    const blueL = texture(flowMap, terrainUv.sub(du)).b
-    const blueU = texture(flowMap, terrainUv.add(dv)).b
-    const blueD = texture(flowMap, terrainUv.sub(dv)).b
-    const grad  = vec2( blueR.sub(blueL).mul(0.5), blueU.sub(blueD).mul(0.5) )
-
-    // Tangente (90° Drehung) = Flussrichtungskandidat
-    let tangent = vec2( grad.y.mul(-1.0), grad.x )
-    // Fallback mischen, wenn Gradient zu klein ist (verhindert „Einfrieren“)
-    const gAmp     = clamp( length(grad).mul(200.0), 0.0, 1.0 ) // Gain tweaken
-    const fallback = vec2(0.0, 1.0)
-    tangent = normalize( mix(fallback, tangent, gAmp) )
-
-    // optional: Flussrichtung invertieren, falls „falsch herum“
-    const uFlipFlow = uniform(1.0) // +1 normal, -1 invertiert
     const flowDir = normalize(vec2(uniform(0.0), uniform(1.0))) // z.B. +Z
     const flowPhase = dot(flowDir, positionWorld.xz).mul(uniform(0.25))
 
@@ -58,13 +34,7 @@ export default function WaterMaterial(minBlue, maxBlue) {
     const uBandStart        = uniform(0.0)   // Bandbeginn (Abstand vom Ufer)
     const uBandEnd          = uniform(0.80)   // Bandende (vor der Mitte)
     const uBandFeather      = uniform(0.25)   // weichere Bandkanten
-    const uAdvectPhaseSpeed = uniform(20)   // Strömungsgeschw. (Phase)
     const uAdvectNoiseSpeed = uniform(0.35)   // Strömungsgeschw. (Noise)
-
-    // --- Strömung:
-    // 1) t NICHT advecten → bleibt stabiles Abstandsfeld
-    // 2) Phase entlang flowDir verschieben (sichtbare „Fließ“-Bewegung)
-    const phaseAdvect = dot(flowDir, positionWorld.xz).mul(uAdvectPhaseSpeed)
 
     // 3) Noise entlang flowDir verschieben, um „Fetzen“ mitzunehmen
     const noiseUV = positionWorld.xz

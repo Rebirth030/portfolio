@@ -95,7 +95,7 @@ export default function TerrainPhysics() {
             const x = Math.min(fw - 1, Math.max(0, (u * (fw - 1) + 0.5) | 0))
             const y = Math.min(fh - 1, Math.max(0, (v * (fh - 1) + 0.5) | 0))
             const idx = (y * fw + x) * 4
-            return fData[idx + 0] * (1/255) // Rotkanal
+            return fData[idx] * (1/255) // Rotkanal
         }
 
         const isWaterBlue = (b) => b >= MIN_BLUE && b <= MAX_BLUE
@@ -107,7 +107,7 @@ export default function TerrainPhysics() {
 
         // 1) Basis-Höhen & Maske füllen
         for (let k = 0; k < total; k++) {
-            const x = posAttr.array[k*3 + 0]
+            const x = posAttr.array[k*3]
             const y = posAttr.array[k*3 + 1]
             const z = posAttr.array[k*3 + 2]
 
