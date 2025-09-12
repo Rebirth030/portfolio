@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { InstancedFromRefsMesh } from '../InstancedFromRefs.jsx' // deine bestehende Datei
+import { InstancedFromRefsMesh } from '../../app/InstancedFromRefs.jsx' // deine bestehende Datei
 import createBushMesh from './Bush.jsx'
 
 export default function InstancedBushes() {

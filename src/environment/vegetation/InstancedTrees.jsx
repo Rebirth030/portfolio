@@ -1,10 +1,9 @@
 // src/components/trees/InstancedTrees.jsx
 import { useMemo, useEffect } from 'react'
 import { useControls, folder } from 'leva'
-import { InstancedFromRefs, InstancedFromRefsMesh } from '../InstancedFromRefs.jsx'
+import { InstancedFromRefs, InstancedFromRefsMesh } from '../../app/InstancedFromRefs.jsx'
 import { createSpruceTopMesh } from './SpruceTreeTop.jsx'
 import createOakMesh from './OakLeaves.jsx'
-import * as THREE from 'three'
 
 export default function InstancedTrees() {
     // — Meshes einmalig erzeugen —

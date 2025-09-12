@@ -2,7 +2,7 @@
 import * as THREE from 'three/webgpu'
 import { texture, vec2, sub } from 'three/tsl'
 import { useLoader } from '@react-three/fiber'
-import { uvOffset, uvScale } from '../Terrain/TerrainConstants.js'
+import { uvOffset, uvScale } from '../terrain/TerrainConstants.js'
 
 /**
  * useFogMask
@@ -22,10 +22,10 @@ export function useFogMask(url = '/fog/fogRadial.png') {
      * worldXZNode: z.B. positionWorld.xz
      */
     const buildMaskNode = (worldXZNode) => {
-        // identische Projektions-UVs wie Terrain:
+        // identische Projektions-UVs wie terrain:
         const u = worldXZNode.x.add(uvOffset.x).mul(uvScale.x)
         const v = worldXZNode.y.add(uvOffset.y).mul(uvScale.y)
-        // Terrain-Texturen werden vertikal geflippt → hier genauso:
+        // terrain-Texturen werden vertikal geflippt → hier genauso:
         const uvNode = vec2(u, sub(1.0, v))
         // Maske aus Rotkanal (grau = alle Kanäle gleich)
         return texture(fogTex, uvNode).r

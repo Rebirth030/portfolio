@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo, useState, forwardRef } from 'react'
-import { RigidBody, CapsuleCollider, useRapier } from '@react-three/rapier'
+import { RigidBody, CapsuleCollider} from '@react-three/rapier'
 import { useAnimations, useGLTF, useKeyboardControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useControls, folder } from 'leva'
@@ -34,7 +34,6 @@ function useSmoothCamera(bodyApi, {
 
 const Player = forwardRef(function Player(_props, reference) {
     const [, getKeys] = useKeyboardControls()
-    const { world: rapierWorld } = useRapier()
 
     const momentum   = useRef(new THREE.Vector3())
     const prevSector = useRef(0)
@@ -161,7 +160,7 @@ const Player = forwardRef(function Player(_props, reference) {
             }}
             colliders={false}
             canSleep={false}
-            position={[0, 25, 0]}
+            position={[0, 2, 0]}
             type="dynamic"
             enabledRotations={[false, false, false]}
         >
