@@ -5,7 +5,7 @@ import { baseLinearColor, createTreeLeafMaterialSDF } from '../../utils/foliageU
 
 export default function createOakMesh({
                                           // Farb-/Geometrie-Parameter
-                                          color = '#61803e',
+                                          color = '#3c4f26',
                                           count = 100,
                                           radius = 0.6,
                                           planeSize = 0.6,

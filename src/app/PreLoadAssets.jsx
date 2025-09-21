@@ -6,27 +6,15 @@ const GLBS = [
     '/Models.glb',
     '/Character.glb',
     '/PortfolioTerrain.glb',
-    '/Tree3Stem.glb',
-    '/Tree3Top.glb',
-    '/Tree3Instances.glb',
-    '/OakTreeStem.glb',
-    '/OakTreeInstances.glb',
-    '/OakTreeLeafInstances.glb',
-    '/BushInstances.glb'
 ]
 
 const TEXTURES = [
     '/AlphaMap.png',
-    '/bushLeaves.png',
     '/bushLeaves_sdf.png',
-    '/spruceLeaves.png',
     '/spruceLeaves_sdf.png',
     '/noiseTexture.png',
     '/Heightmap.png',
     '/TerrainColoring0000.png',
-    '/matcap-grass.png',
-    '/matcap-grass2.png',
-    '/portfolioIcon.jpg'
 ]
 
 // Optional export der Listen

@@ -8,7 +8,7 @@ export const ringAngleOffset = (i) => i * GOLDEN_ANGLE
 
 export function createSpruceTopMesh({
                                         // Farb-/Form-Parameter des Kegels
-                                        color = '#3b6f2a',
+                                        color = '#4e833c',
                                         coneRadius = 1,
                                         coneHeight = 5,
                                         levels = 15,

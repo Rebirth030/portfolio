@@ -6,13 +6,10 @@ import { createSpruceTopMesh } from './SpruceTreeTop.jsx'
 import createOakMesh from './OakLeaves.jsx'
 
 export default function InstancedTrees() {
-    // — Meshes einmalig erzeugen —
-    const spruceMesh = useMemo(() => createSpruceTopMesh(), [])
-    const oakMesh    = useMemo(() => createOakMesh(), [])
-
     // --- Leva: Alles in einem Ordner, Unterordner "Oak" & "Spruce" ---
     const {
         // Oak
+        colorOak, colorSpruce,
         oakThreshold, oakSoftness, oakAlphaTest,
         oakInnerR, oakOuterR, oakFadeStr,
         oakBacklight,
@@ -34,7 +31,8 @@ export default function InstancedTrees() {
             }, { collapsed: true }),
             Shading: folder({
                 oakBacklight: { value: 0.18, min: 0.0, max: 0.6, step: 0.01, label: 'backlight' }
-            }, { collapsed: true })
+            }, { collapsed: true }),
+            colorOak: { value: '#3c4f26', label: 'Color' },
         }, { collapsed: true }),
 
         Spruce: folder({
@@ -50,9 +48,14 @@ export default function InstancedTrees() {
             }, { collapsed: true }),
             Shading: folder({
                 spBacklight: { value: 0.16, min: 0.0, max: 0.6, step: 0.01, label: 'backlight' }
-            }, { collapsed: true })
+            }, { collapsed: true }),
+            colorSpruce: { value: '#4e833c', label: 'Color' },
         }, { collapsed: true })
     }, { collapsed: true })
+
+    // — Meshes einmalig erzeugen —
+    const spruceMesh = useMemo(() => createSpruceTopMesh({color:colorSpruce}), [colorSpruce])
+    const oakMesh    = useMemo(() => createOakMesh({color: colorOak}), [colorOak])
 
     // — Oak: Uniforms & Material-Settings live aktualisieren —
     useEffect(() => {
@@ -86,9 +89,10 @@ export default function InstancedTrees() {
         <>
             {/* Oak stems */}
             <InstancedFromRefs
-                modelUrl="/OakTreeStem.glb"
-                refsUrl="/OakTreeInstances.glb"
-                filter={(o) => o.isMesh && o.name.startsWith('OakTree')}
+                modelUrl="/Models.glb"
+                modelFilter={(o) => o.name.startsWith('OakTree')}
+                refsUrl="/Instances.glb"
+                filter={(o) => o.isMesh && o.name.startsWith('OakTreeInstance')}
                 castShadow
                 receiveShadow
                 position={[0, -20, 0]}
@@ -101,7 +105,7 @@ export default function InstancedTrees() {
             {/* Oak leaves */}
             <InstancedFromRefsMesh
                 modelMesh={oakMesh}
-                refsUrl="/OakTreeLeafInstances.glb"
+                refsUrl="/Instances.glb"
                 filter={(o) => o.isMesh && o.name.startsWith('OakTreeLeaf')}
                 castShadow
                 receiveShadow
@@ -120,7 +124,7 @@ export default function InstancedTrees() {
             {/* Spruce crown */}
             <InstancedFromRefsMesh
                 modelMesh={spruceMesh}
-                refsUrl="/Tree3Instances.glb"
+                refsUrl="/Instances.glb"
                 filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
                 castShadow
                 receiveShadow
@@ -138,8 +142,9 @@ export default function InstancedTrees() {
 
             {/* Tree3 stems */}
             <InstancedFromRefs
-                modelUrl="/Tree3Stem.glb"
-                refsUrl="/Tree3Instances.glb"
+                modelUrl="/Models.glb"
+                modelFilter={(o) => o.name.startsWith('Tree3_Stem')}
+                refsUrl="/Instances.glb"
                 filter={(o) => o.isMesh && o.name.startsWith('Tree3')}
                 castShadow
                 receiveShadow

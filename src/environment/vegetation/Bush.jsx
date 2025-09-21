@@ -5,7 +5,7 @@ import { baseLinearColor, createLeafMaterial } from '../../utils/foliageUtils.js
 
 export default function createBushMesh({
                                            // Farb-/Geometrie-Parameter
-                                           color = '#61803e',
+                                           color = '#415c2c',
                                            count = 100,
                                            radius = 0.6,
                                            planeSize = 0.6,

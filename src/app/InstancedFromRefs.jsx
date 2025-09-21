@@ -10,7 +10,6 @@ import { positionWorld, positionLocal } from 'three/tsl'
 import { buildWindOffsetNode, defaultWind } from '../utils/wind.js'
 
 // Physik
-// Physik
 import {
     InstancedRigidBodies,
     useRapier,
@@ -22,9 +21,31 @@ import {
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
+function makeAcceptFilter(filter) {
+    if (!filter) return (o) => true
+    if (typeof filter === 'function') return filter
+    if (filter instanceof RegExp) return (o) => typeof o.name === 'string' && filter.test(o.name)
+    if (typeof filter === 'string') {
+        const needle = filter.toLowerCase()
+        return (o) => typeof o.name === 'string' && o.name.toLowerCase().includes(needle)
+    }
+    return () => true
+}
+
+/** Liefert das erste Mesh aus einer Szene, das `filter` erfüllt. */
+function getMeshFromScene(scene, { filter }) {
+    const accept = makeAcceptFilter(filter)
+    let mesh = null
+    scene.traverse((o) => {
+        if (!mesh && o.isMesh && o.geometry && accept(o)) mesh = o
+    })
+    return mesh
+}
+
+/** Erzeugt ein Float32Array der Instanzmatrizen aus einer Referenz-Szene. */
 function collectInstanceMatrixArray(root, { filter, relativeTo = null } = {}) {
     const accept =
-        filter ||
+        makeAcceptFilter(filter) ||
         ((o) => {
             const n = (o.name || '').toLowerCase()
             if (o.isLight || o.isCamera || o.isBone) return false
@@ -53,12 +74,6 @@ function collectInstanceMatrixArray(root, { filter, relativeTo = null } = {}) {
     })
 
     return out
-}
-
-function getFirstMesh(scene) {
-    let mesh = null
-    scene.traverse((o) => { if (!mesh && o.isMesh && o.geometry) mesh = o })
-    return mesh
 }
 
 /** Lädt (einmal) Noise-Textur & baut Wind-Optionen – ohne Duplikate. */
@@ -97,6 +112,7 @@ function applyWindToMaterial(material, { noiseTex, windOpts }, wind) {
     return material
 }
 
+
 // -----------------------------------------------------------------------------
 // Core (gemeinsam für beide Varianten)
 // -----------------------------------------------------------------------------
@@ -108,15 +124,15 @@ function InstancedFromRefsCore({
                                    frustumCulled = false,
                                    physics = false,
 
-                                   // NEU: Collider-Modus & Parameter für Sockel
+                                   // Collider-Modus & Parameter für Sockel
                                    colliderMode = 'auto',   // 'auto' (AABB) | 'base' (nur Sockel)
-                                   baseHeight = 1,          // Gesamthöhe des Sockels (Meter)
-                                   baseRadius = 0.45,       // Radius des Sockels (Meter)
+                                   baseHeight = 1,
+                                   baseRadius = 0.45,
 
-                                   ...props                 // Transform + Render-Props
+                                   ...props
                                }) {
     const refs = useGLTF(refsUrl, true)
-    const { world, rapier } = useRapier()        // NEU: Zugriff auf Rapier-World
+    const { world, rapier } = useRapier()
 
     const mats = useMemo(
         () => collectInstanceMatrixArray(refs.scene, { filter, relativeTo }),
@@ -126,12 +142,9 @@ function InstancedFromRefsCore({
     const count = mats.length / 16
     const meshRef = useRef()
 
-    // -------------------------------------------------
-    // Hilfsfunktionen für Transform-Komposition (Parent)
-    // -------------------------------------------------
+    // Parent-Transform aus props in Matrix backen
     const parentMatrix = useMemo(() => {
         const m = new THREE.Matrix4()
-        // extrahiere optionale Parent-TRS aus props
         const pos = new THREE.Vector3()
         const quat = new THREE.Quaternion()
         const scl = new THREE.Vector3(1, 1, 1)
@@ -146,7 +159,6 @@ function InstancedFromRefsCore({
             else if (typeof s === 'number') scl.setScalar(s)
         }
         if (props.rotation) {
-            // rotation als Euler [x,y,z] (Radian)
             const r = props.rotation
             const e = new THREE.Euler(r[0] || 0, r[1] || 0, r[2] || 0)
             quat.setFromEuler(e)
@@ -158,11 +170,7 @@ function InstancedFromRefsCore({
         return m.compose(pos, quat, scl)
     }, [props.position, props.rotation, props.quaternion, props.scale])
 
-    // -------------------------------------------------
-    // Visuales Instancing:
-    // - bei auto: von IRB gesteuert (s.u.)
-    // - bei base: wir setzen die Matrix selbst
-    // -------------------------------------------------
+    // Visuales Instancing
     const useManualInstancing = physics && colliderMode === 'base' ? true : !physics
 
     useLayoutEffect(() => {
@@ -170,7 +178,6 @@ function InstancedFromRefsCore({
         const im = meshRef.current
         if (!im || count === 0) return
 
-        // Wenn ein Parent-Transform existiert, kombinieren wir es
         const tmp = new THREE.Matrix4()
         const combined = new THREE.Matrix4()
         for (let i = 0; i < count; i++) {
@@ -189,13 +196,10 @@ function InstancedFromRefsCore({
 
     if (count === 0) return null
 
-    // -------------------------------------------------
-    // Physik
-    // -------------------------------------------------
+    // -------------------- Physik --------------------
 
-    // A) AUTO: wie gehabt via InstancedRigidBodies + colliders="cuboid"
+    // A) AUTO: InstancedRigidBodies + colliders="cuboid"
     if (physics && colliderMode === 'auto') {
-        // Instanzen für IRB (ohne Parent-TRS, der kommt über props an IRB)
         const instancesForPhysics = useMemo(() => {
             const tmp = new THREE.Matrix4()
             const pos = new THREE.Vector3()
@@ -205,7 +209,7 @@ function InstancedFromRefsCore({
             for (let i = 0; i < count; i++) {
                 tmp.fromArray(mats, i * 16).decompose(pos, quat, scl)
                 arr[i] = {
-                    key: `tree-${i}`,
+                    key: `inst-${i}`,
                     position: [pos.x, pos.y, pos.z],
                     quaternion: [quat.x, quat.y, quat.z, quat.w],
                     scale: [scl.x, scl.y, scl.z],
@@ -214,7 +218,6 @@ function InstancedFromRefsCore({
             return arr
         }, [mats, count])
 
-        // Transform-Props an IRB, Render-Props ans Mesh
         const { position, rotation, quaternion, scale, ...renderProps } = props
 
         return (
@@ -222,9 +225,9 @@ function InstancedFromRefsCore({
                 instances={instancesForPhysics}
                 type="fixed"
                 colliders="cuboid"
-                position={position}
                 rotation={rotation}
                 quaternion={quaternion}
+                position={position}
                 scale={scale}
             >
                 <instancedMesh
@@ -237,14 +240,10 @@ function InstancedFromRefsCore({
         )
     }
 
-    // B) BASE: imperativ RigidBodies nur am Sockel – Tick-synchron, borrow-sicher
-
-// Wir halten NUR die Bodies (Colliders hängen an den Bodies)
+    // B) BASE: eigene Bodies (nur Sockel)
     const bodiesRef = useRef([])
-// Flag, um (de)konstruktions-Vorgänge zu takten
     const rebuildRef = useRef(false)
 
-// Daten der gewünschten Bodies vorab berechnen
     const baseBodiesData = useMemo(() => {
         if (!(physics && colliderMode === 'base')) return null
         const tmp = new THREE.Matrix4()
@@ -266,42 +265,31 @@ function InstancedFromRefsCore({
             combined.decompose(pos, quat, scl)
 
             data[i] = {
-                // Welt-TRS
-                tx: pos.x,
-                ty: pos.y,
-                tz: pos.z,
-                qx: quat.x,
-                qy: quat.y,
-                qz: quat.z,
-                qw: quat.w,
-                // Collider-Halbausdehnungen (skaliert) + lokaler Offset (Mitte des Sockels)
+                tx: pos.x, ty: pos.y, tz: pos.z,
+                qx: quat.x, qy: quat.y, qz: quat.z, qw: quat.w,
                 hx: Math.max(EPS, hx * scl.x),
                 hy: Math.max(EPS, hy * scl.y),
                 hz: Math.max(EPS, hz * scl.z),
-                oy: hy * scl.y, // Mittelpunkt des Sockels = halbe Höhe über „Boden“
+                oy: hy * scl.y,
             }
         }
         return data
     }, [physics, colliderMode, mats, count, parentMatrix, baseHeight, baseRadius])
 
-// Immer wenn sich baseBodiesData ändert, planen wir einen Rebuild
     useEffect(() => {
         if (!(physics && colliderMode === 'base')) return
         rebuildRef.current = true
     }, [physics, colliderMode, baseBodiesData])
 
-// Vor dem Physik-Step: alte Bodies sicher entfernen (wenn Rebuild ansteht)
     useBeforePhysicsStep(() => {
         if (!(physics && colliderMode === 'base')) return
         if (!rebuildRef.current) return
-        // Alte Bodies sauber raus
         for (const b of bodiesRef.current) {
             try { world.removeRigidBody(b) } catch {}
         }
         bodiesRef.current = []
     })
 
-// Nach dem Physik-Step: neue Bodies erzeugen (wenn Rebuild ansteht)
     useAfterPhysicsStep(() => {
         if (!(physics && colliderMode === 'base')) return
         if (!rebuildRef.current) return
@@ -322,29 +310,24 @@ function InstancedFromRefsCore({
             world.createCollider(colDesc, body)
             bodiesRef.current.push(body)
         }
-
-        // Rebuild abgeschlossen
         rebuildRef.current = false
     })
 
-// Cleanup beim Unmount: im nächsten Tick entfernen
     useEffect(() => {
         return () => {
             if (!(physics && colliderMode === 'base')) return
-            // Markieren und beim nächsten beforeStep werden Bodies entfernt
             rebuildRef.current = true
         }
     }, [physics, colliderMode])
 
-
-    // Visuals rendern (mit manuell gesetzter instanceMatrix)
+    // Visuals (manuell gesetzte instanceMatrix)
     const { position, rotation, quaternion, scale, ...renderProps } = props
     return (
         <instancedMesh
             ref={meshRef}
             args={[source.geometry, source.material, count]}
             frustumCulled={frustumCulled}
-            {...renderProps} // nur Render-Props (Transform haben wir bereits eingerechnet)
+            {...renderProps}
         />
     )
 }
@@ -354,27 +337,31 @@ function InstancedFromRefsCore({
 // Öffentliche Komponenten
 // -----------------------------------------------------------------------------
 
-/** 1) Wie gehabt: Modell aus GLB, Refs aus GLB */
+/** 1) Modell & Refs beide aus GLB, jeweils mit Filter */
 export function InstancedFromRefs({
-                                      modelUrl,
-                                      refsUrl,
-                                      filter,
+                                      modelUrl,          // GLB mit mehreren Meshes
+                                      modelFilter,       // Pflicht: Funktion | RegExp | String
+                                      refsUrl,           // GLB mit Referenz-Nodes
+                                      filter,            // Funktion | RegExp | String
                                       relativeTo = null,
                                       frustumCulled = false,
                                       wind = null,
                                       physics = false,
                                       ...props
                                   }) {
-    const model = useGLTF(modelUrl, true)
-    const baseMesh = getFirstMesh(model.scene)
-    if (!baseMesh) throw new Error('Kein Mesh im model.glb gefunden')
+    const model = useGLTF(modelUrl, true) // Draco/Meshopt werden nur genutzt, wenn die Datei es verlangt. :contentReference[oaicite:1]{index=1}
+    const baseMesh = useMemo(() => {
+        const m = getMeshFromScene(model.scene, { filter: modelFilter })
+        console.log(model)
+        if (!m) throw new Error('InstancedFromRefs: Kein Mesh gefunden, das modelFilter entspricht. Model: ' + modelUrl + ', Filter: ' + modelFilter)
+        return m
+    }, [model, modelFilter])
 
     const nodeMat = useMemo(
         () => buildNodeMaterialFromExisting(baseMesh.material),
         [baseMesh.material]
     )
 
-    // Wind-Ressourcen EINMAL, ohne Duplikate:
     const windRes = useWindResources(wind)
     const material = useMemo(
         () => applyWindToMaterial(nodeMat, windRes, wind),
@@ -399,7 +386,7 @@ export function InstancedFromRefs({
     )
 }
 
-/** 2) Neu: Modell als direktes THREE.Mesh, Refs aus GLB */
+/** 2) Alternativ: Modell als direktes THREE.Mesh, Refs aus GLB */
 export function InstancedFromRefsMesh({
                                           modelMesh,            // THREE.Mesh (REQUIRED)
                                           refsUrl,              // GLB mit Instanz-Refs (REQUIRED)
@@ -415,7 +402,6 @@ export function InstancedFromRefsMesh({
     }
 
     const nodeMat = modelMesh.material
-
     const windRes = useWindResources(wind)
     const material = useMemo(
         () => applyWindToMaterial(nodeMat, windRes, wind),

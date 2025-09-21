@@ -1,6 +1,6 @@
 // utils/foliageUtils.js
 import * as THREE from 'three'
-import { MeshPhysicalNodeMaterial } from 'three/webgpu'
+import {MeshPhysicalNodeMaterial} from 'three/webgpu'
 import {
     texture, uv, screenUV, screenSize,
     vec2, vec3, float, uniform,
@@ -30,6 +30,7 @@ export function baseLinearColor(hex, acesMul = 0.75) {
    Interner Helfer: SDF-Coverage aus Alpha-Kanal (0..1, Isolinie ~0.5)
    - thresholdNode: TSL-Node (float)
    - softnessNode : TSL-Node (float), skaliert fwidth-ähnliche Breite
+   → rein aus Ausdrücken aufgebaut (keine Assigns/Mutationen)
 ------------------------------------------------------------- */
 function sdfCoverageAlphaChannel(sdfTexture, thresholdNode, softnessNode) {
     const s4 = texture(sdfTexture, uv())
@@ -38,7 +39,7 @@ function sdfCoverageAlphaChannel(sdfTexture, thresholdNode, softnessNode) {
     // fwidth ≈ |dFdx| + |dFdy|, mit Schutz vor 0
     const ddx = abs(dFdx(sdf01))
     const ddy = abs(dFdy(sdf01))
-    const fw  = max(add(ddx, ddy), float(1.0 / 2048.0))
+    const fw = max(add(ddx, ddy), float(1.0 / 2048.0))
 
     const spread = mul(softnessNode, fw) // skalenrobuste Kantenbreite
     return smoothstep(sub(thresholdNode, spread), add(thresholdNode, spread), sdf01)
@@ -49,27 +50,28 @@ function sdfCoverageAlphaChannel(sdfTexture, thresholdNode, softnessNode) {
    - SDF liegt im Alpha-Kanal
    - Depth-stabil via alphaTest (kein Blending)
    - Kanten-AA skalenrobust (fwidth-Äquivalent)
+   - r180-konform: keine in-place Assignments / .toVar()
 ------------------------------------------------------------- */
 export function createTreeLeafMaterialSDF({
-                                                          // Texturen
-                                                          sdfUrl,                           // z. B. '/bushLeaves_sdf.png' – SDF-Isolinie ~ 0.5
-                                                          screenNoiseUrl = null,            // optionales Noise für organischen Fade-Rand
+                                              // Texturen
+                                              sdfUrl,                           // z. B. '/bushLeaves_sdf.png' – SDF-Isolinie ~ 0.5
+                                              screenNoiseUrl = null,            // optionales Noise für organischen Fade-Rand
 
-                                                          // Shading/Albedo
-                                                          baseLin,                          // THREE.Color (linear) – Backlight-Ton
-                                                          backlight = 0.16,
-                                                          sunDir = new THREE.Vector3(0, 1, 0),
+                                              // Shading/Albedo
+                                              baseLin,                          // THREE.Color (linear) – Backlight-Ton
+                                              backlight = 0.16,
+                                              sunDir = new THREE.Vector3(0, 1, 0),
 
-                                                          // Cutout/AA
-                                                          initialThreshold = 0.50,          // ~ SDF-Isolinie
-                                                          softness = 1.0,                   // skaliert fwidth-basierte Breite
-                                                          alphaTest = 0.5,                  // depth-stabiler Cut
+                                              // Cutout/AA
+                                              initialThreshold = 0.50,          // ~ SDF-Isolinie
+                                              softness = 1.0,                   // skaliert fwidth-basierte Breite
+                                              alphaTest = 0.5,                  // depth-stabiler Cut
 
-                                                          // Screen-Fade (Zentrum → außen)
-                                                          innerRadius = 0.10,
-                                                          outerRadius = 0.22,
-                                                          fadeStrength = 1.0                // 0..1
-                                                      } = {}) {
+                                              // Screen-Fade (Zentrum → außen)
+                                              innerRadius = 0.10,
+                                              outerRadius = 0.22,
+                                              fadeStrength = 1.0                // 0..1
+                                          } = {}) {
     // --- Texturen laden ---
     const sdfTex = loadMaskTexture(sdfUrl)
     const noiseTex = screenNoiseUrl ? loadMaskTexture(screenNoiseUrl) : null
@@ -79,26 +81,25 @@ export function createTreeLeafMaterialSDF({
 
     // --- Uniforms (GUI-freundlich) ---
     const uThreshold = uniform(initialThreshold)
-    const uSoftness  = uniform(softness)
-    const uFadeStr   = uniform(fadeStrength)
-    const uInnerR    = uniform(innerRadius)
-    const uOuterR    = uniform(outerRadius)
+    const uSoftness = uniform(softness)
+    const uFadeStr = uniform(fadeStrength)
+    const uInnerR = uniform(innerRadius)
+    const uOuterR = uniform(outerRadius)
     const uBacklight = uniform(backlight)
 
-    // --- Screen-Fade (aspect-korrigiert) ---
+    // --- Screen-Fade (aspect-korrigiert) – rein aus Ausdrücken ---
     const aspect = screenSize.x.div(screenSize.y)
-    const toC = sub(screenUV, vec2(0.5, 0.5)).toVar()
-    toC.x.mulAssign(aspect)
-    let dist = length(toC) // 0 in der Mitte, größer nach außen
+    const dx = sub(screenUV.x, float(0.5)).mul(aspect)
+    const dy = sub(screenUV.y, float(0.5))
+    const distBase = length(vec2(dx, dy))
 
     // Optional organischer Rand
-    if (noiseTex) {
-        const rimFreq = float(3.0)
-        const rimStr  = float(0.15)
-        const n = texture(noiseTex, screenUV.mul(rimFreq)).r // 0..1
-        const offset = add(n, float(-0.5)).mul(rimStr)
-        dist = add(dist, offset)
-    }
+    const dist = noiseTex
+        ? add(
+            distBase,
+            add(texture(noiseTex, screenUV.mul(float(3.0))).r, float(-0.5)).mul(float(0.15))
+        )
+        : distBase
 
     // Fade-Maske 0..1 (1 = im Zentrum aktiv)
     const fadeMask = clamp(
@@ -150,6 +151,11 @@ export function createTreeLeafMaterialSDF({
     return mat
 }
 
+/* -------------------------------------------------------------
+   Klassisches Alpha-Leaf (Fallback)
+   – nutzt dieselbe SDF-Textur (Alpha-Kanal), statischer Threshold 0.5
+   – depth-stabil via alphaTest, r180-konform
+------------------------------------------------------------- */
 export function createLeafMaterial({
                                        sdfUrl,                            // SDF-Datei statt Alpha-Map
                                        baseLin,
@@ -187,4 +193,3 @@ export function createLeafMaterial({
 
     return material
 }
-

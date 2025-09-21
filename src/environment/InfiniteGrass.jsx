@@ -20,12 +20,12 @@ export default function InfiniteGrass({ playerRef }) {
         pathThreshold, pathShrinkRange, pathMinScale
     } = useControls('Infinite Grass', {
         Gras: folder({
-            gridSize: { value: 510, min: 10, max: 1000, step: 10 },
+            gridSize: { value: 410, min: 10, max: 1000, step: 10 },
             gridOffsetZ: { value: -21, min: -50, max: 0, step: 1 },
             scaleX: { value: 1.9, min: 0.1, max: 10, step: 0.1 },
-            scaleZ: { value: 1.3, min: 0.1, max: 10, step: 0.1 },
-            spacing: { value: 0.11, min: 0.01, max: 1, step: 0.01 },
-            bladeHeight: { value: 0.42, min: 0.05, max: 1, step: 0.01 },
+            scaleZ: { value: 1.2, min: 0.1, max: 10, step: 0.1 },
+            spacing: { value: 0.13, min: 0.01, max: 1, step: 0.01 },
+            bladeHeight: { value: 0.50, min: 0.05, max: 1, step: 0.01 },
             maxHeightVariation: { value: 0.11, min: 0, max: 0.2, step: 0.005 },
             topColorHex: { value: '#71aa94' },
             bottomColorHex: { value: '#1c472d' },
