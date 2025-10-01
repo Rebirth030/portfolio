@@ -3,10 +3,11 @@ import { createRoot } from 'react-dom/client'
 import * as THREE from 'three/webgpu'
 import { Canvas } from '@react-three/fiber'
 import Game from './app/Game.jsx'
-import { StrictMode, Suspense } from 'react'
+import {StrictMode, Suspense} from 'react'
 import { Leva } from 'leva'
-import { KeyboardControls, StatsGl } from '@react-three/drei'
+import {KeyboardControls, StatsGl} from '@react-three/drei'
 import GpuTimestampResolver from './app/GpuTimestampResolver.jsx'
+
 
 createRoot(document.getElementById('root')).render(
     <Suspense fallback={<div> Loading... </div>}>
@@ -35,7 +36,7 @@ createRoot(document.getElementById('root')).render(
                     shadows
                     camera={{ fov: 45, near: 0.1, far: 200, position: [2.5, 4, 6] }}
                 >
-                    <Game />
+                    <Game/>
                     <GpuTimestampResolver />
                     <StatsGl trackGPU />
                 </Canvas>

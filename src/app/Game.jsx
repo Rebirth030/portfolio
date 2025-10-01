@@ -19,13 +19,13 @@ export default function Game() {
 
     return (
         <>
-            <OrbitControls />
             <Physics debug={false} updateLoop="follow" timestep="fixed">
                 <PreloadAssets />
                 <Environment playerRef={playerRef} />
                 <Player ref={playerRef} />
-            </Physics>
+                </Physics>
             <Postprocessing/>
+            <OrbitControls />
         </>
     )
 }
