@@ -1,21 +1,54 @@
-import {create} from "zustand";
+// app/state/useGameStore.js
+import { create } from 'zustand'
 
-export default create(() => {
-    return {
-        phase: 'ready',
+export const useGameStore = create((set, get) => ({
+    mode: 'Explore',
+    activeStationId: null,
+    inputLocked: false,
+    cameraApi: null,
 
-        start: () => {
-            if (state.phase === 'ready')
-                this.setState({phase: 'running'})
-        },
-        reload: () => {
-            if (state.phase === 'running' || state.phase === 'ended')
-                this.setState({phase: 'ready'})
-        },
-        final : () => {
-            if (state.phase === 'running')
-                this.setState({phase: 'ended'})
+    focusPoints: new Set([
+
+        ]
+    ),
+
+
+    beginInteraction: async () => {
+        const { cameraApi, zones } = get()
+        if (!cameraApi) return
+        const entry = activeStationId
+        const focusPose = entry?.focusPose
+        if (!focusPose) return
+
+        set({inputLocked: true })
+        try {
+            await cameraApi.focusTo(focusPose)
+            // Später ggf.: set({ mode: 'Overlay' })
+        } catch {
+            await cameraApi.returnToSnapshot().catch(() => {})
+            set({ activeStationId: null, inputLocked: false })
         }
+    },
 
-    }
-})
+    endInteraction: async () => {
+        const { cameraApi } = get()
+        if (!cameraApi) return
+        try {
+            await cameraApi.returnToSnapshot()
+        } finally {
+            set({ activeStationId: null, inputLocked: false, mode: 'Explore' })
+        }
+    },
+
+    setCameraApi: (api) => set({ cameraApi: api }),
+
+
+    setActiveStation: (id) => {
+        set({ activeStationId: id })
+        console.log('Station set to:', id)
+    },
+
+    getActiveStation: () => {
+        return get().activeStationId
+    },
+}))

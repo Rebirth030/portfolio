@@ -21,6 +21,8 @@ createRoot(document.getElementById('root')).render(
                     { name: 'rightward',keys: ['ArrowRight', 'KeyD'] },
                     { name: 'jump',     keys: ['Space'] },
                     { name: 'run',      keys: ['Shift'] },
+                    { name: 'escape',   keys: ['Escape'] },
+                    { name: 'interact',        keys: ['KeyE']}
                 ]}
             >
                 <Canvas

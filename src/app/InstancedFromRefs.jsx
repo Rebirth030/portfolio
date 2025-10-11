@@ -125,6 +125,8 @@ function InstancedFromRefsCore({
                                    physics = false,
 
                                    // Collider-Modus & Parameter für Sockel
+                                   type = 'fixed',
+                                   colliders = 'cuboid',
                                    colliderMode = 'auto',   // 'auto' (AABB) | 'base' (nur Sockel)
                                    baseHeight = 1,
                                    baseRadius = 0.45,
@@ -223,8 +225,8 @@ function InstancedFromRefsCore({
         return (
             <InstancedRigidBodies
                 instances={instancesForPhysics}
-                type="fixed"
-                colliders="cuboid"
+                type={type}
+                colliders={colliders}
                 rotation={rotation}
                 quaternion={quaternion}
                 position={position}
@@ -347,12 +349,13 @@ export function InstancedFromRefs({
                                       frustumCulled = false,
                                       wind = null,
                                       physics = false,
+                                      type = 'fixed',
+                                      colliders = 'cuboid',
                                       ...props
                                   }) {
     const model = useGLTF(modelUrl, true) // Draco/Meshopt werden nur genutzt, wenn die Datei es verlangt. :contentReference[oaicite:1]{index=1}
     const baseMesh = useMemo(() => {
         const m = getMeshFromScene(model.scene, { filter: modelFilter })
-        console.log(model)
         if (!m) throw new Error('InstancedFromRefs: Kein Mesh gefunden, das modelFilter entspricht. Model: ' + modelUrl + ', Filter: ' + modelFilter)
         return m
     }, [model, modelFilter])
@@ -381,6 +384,8 @@ export function InstancedFromRefs({
             relativeTo={relativeTo}
             frustumCulled={frustumCulled}
             physics={physics}
+            type={type}
+            colliders={colliders}
             {...props}
         />
     )
@@ -395,6 +400,8 @@ export function InstancedFromRefsMesh({
                                           frustumCulled = false,
                                           wind = null,
                                           physics = false,
+                                          type = 'fixed',
+                                          colliders = 'cuboid',
                                           ...props
                                       }) {
     if (!modelMesh || !modelMesh.isMesh || !modelMesh.geometry) {
@@ -421,6 +428,8 @@ export function InstancedFromRefsMesh({
             relativeTo={relativeTo}
             frustumCulled={frustumCulled}
             physics={physics}
+            type={type}
+            colliders={colliders}
             {...props}
         />
     )

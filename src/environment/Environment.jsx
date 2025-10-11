@@ -18,7 +18,7 @@ import WoodWorking from "./fixedEnvironmentObjects/WoodWorking.jsx";
 import MarketStall from "./fixedEnvironmentObjects/MarketStall.jsx";
 import WoodenChest from "./movableObjects/WoodenChest.jsx";
 import Cask from "./movableObjects/Cask.jsx";
-import {Plank} from "./movableObjects/Plankl.jsx";
+import {Plank} from "./movableObjects/Plank.jsx";
 import RuneStones from "./movableObjects/RuneStones.jsx";
 import Bench from "./movableObjects/Bench.jsx";
 import Monolith from "./movableObjects/Monolith.jsx";

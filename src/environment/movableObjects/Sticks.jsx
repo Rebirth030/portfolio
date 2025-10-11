@@ -9,8 +9,8 @@ export default function Sticks() {
             filter={(o) => o.isMesh && o.name.startsWith('Branch1Instance')}
             position={[0, -20, 0]}
             physics
-            collider={"hull"}
             type={"dynamic"}
+            colliders={"hull"}
             />
         <InstancedFromRefs
             modelUrl="/Models.glb"
@@ -19,8 +19,8 @@ export default function Sticks() {
             filter={(o) => o.isMesh && o.name.startsWith('Branch2Instance')}
             position={[0, -20, 0]}
             physics
-            collider={"hull"}
             type={"dynamic"}
+            colliders={"hull"}
             />
         </>
 }

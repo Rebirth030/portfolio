@@ -1,39 +1,18 @@
+// player/Player.jsx
 import { useRef, useEffect, useMemo, useState, forwardRef } from 'react'
-import { RigidBody, CapsuleCollider} from '@react-three/rapier'
+import { RigidBody, CapsuleCollider, interactionGroups } from '@react-three/rapier'
 import { useAnimations, useGLTF, useKeyboardControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useControls, folder } from 'leva'
 import * as THREE from 'three/webgpu'
 import buildNodeMaterialFromExisting from '../utils/buildNodeMaterialFromExisting.js'
+import {useGameStore} from "../hooks/useGame.js";
 
 const UP_VECTOR = new THREE.Vector3(0, 1, 0)
 
-function useSmoothCamera(bodyApi, {
-    cameraFollowing,
-    cameraOffsetY,
-    cameraOffsetZ,
-    cameraTargetOffsetY,
-    cameraLerpFactor
-}) {
-    const smoothedPos = useMemo(() => new THREE.Vector3(), [])
-    const smoothedTg  = useMemo(() => new THREE.Vector3(), [])
-    const tmpPos      = useMemo(() => new THREE.Vector3(), [])
-    const tmpTg       = useMemo(() => new THREE.Vector3(), [])
-
-    useFrame((state, delta) => {
-        if (!bodyApi || !cameraFollowing) return
-        const p = bodyApi.translation()
-        tmpPos.set(p.x, p.y + cameraOffsetY, p.z + cameraOffsetZ)
-        tmpTg.set(p.x, p.y + cameraTargetOffsetY, p.z)
-        smoothedPos.lerp(tmpPos, cameraLerpFactor * delta)
-        smoothedTg .lerp(tmpTg,  cameraLerpFactor * delta)
-        state.camera.position.copy(smoothedPos)
-        state.camera.lookAt(smoothedTg)
-    })
-}
-
 const Player = forwardRef(function Player(_props, reference) {
     const [, getKeys] = useKeyboardControls()
+    const inputLocked = useGameStore(s => s.inputLocked)
 
     const momentum   = useRef(new THREE.Vector3())
     const prevSector = useRef(0)
@@ -62,7 +41,6 @@ const Player = forwardRef(function Player(_props, reference) {
     const {
         capsuleHalfHeight, capsuleRadius,
         walkImpulseStrength, runMultiplier, rotationSpeed, decelFactor,
-        cameraOffsetY, cameraOffsetZ, cameraTargetOffsetY, cameraLerpFactor, cameraFollowing
     } = useControls('Player Settings', {
         Collider: folder({
             capsuleHalfHeight: { value: 0.7, min: 0.1, max: 1, step: 0.01 },
@@ -74,13 +52,6 @@ const Player = forwardRef(function Player(_props, reference) {
             rotationSpeed:       { value: 15,   min: 1, max: 30, step: 1 },
             decelFactor:         { value: 4.75, min: 0.01, max: 10, step: 0.01 },
         }, { collapsed: true }),
-        Camera: folder({
-            cameraFollowing:     { value: true },
-            cameraOffsetY:       { value: 16.2,  min: 0,  max: 20, step: 0.1 },
-            cameraOffsetZ:       { value: 15.6,  min: 1,  max: 20, step: 0.1 },
-            cameraTargetOffsetY: { value: 0.3,   min: 0,  max: 5,  step: 0.1 },
-            cameraLerpFactor:    { value: 5.0,   min: 1,  max: 20, step: 0.1 },
-        }),
     }, { collapsed: true })
 
     useEffect(() => {
@@ -99,17 +70,17 @@ const Player = forwardRef(function Player(_props, reference) {
     const _quat = useMemo(() => new THREE.Quaternion(), [])
     const _zero = useMemo(() => new THREE.Vector3(), [])
 
-    useSmoothCamera(bodyRef.current, {
-        cameraFollowing,
-        cameraOffsetY,
-        cameraOffsetZ,
-        cameraTargetOffsetY,
-        cameraLerpFactor
-    })
-
     useFrame((_, delta) => {
         const body = bodyRef.current
         if (!body) return
+
+        if (inputLocked) {
+            const { y } = body.linvel()
+            momentum.current.set(0, 0, 0)
+            body.setLinvel({ x: 0, y, z: 0 }, true)
+            if (currentAction !== 'Idle') setCurrentAction('Idle')
+            return
+        }
 
         const { forward, backward, leftward, rightward, run } = getKeys()
         _dir.set(
@@ -153,18 +124,19 @@ const Player = forwardRef(function Player(_props, reference) {
     return (
         <RigidBody
             ref={(api) => {
-                // Body-API intern halten UND dem Parent-Ref durchreichen
                 bodyRef.current = api || undefined
                 if (typeof reference === 'function') reference(api)
                 else if (reference) reference.current = api
             }}
             colliders={false}
             canSleep={false}
-            position={[0, 2, 0]}
+            position={[-55, 5, 50]}
             type="dynamic"
             enabledRotations={[false, false, false]}
         >
-            <CapsuleCollider args={[capsuleHalfHeight, capsuleRadius]} />
+            <CapsuleCollider
+                args={[capsuleHalfHeight, capsuleRadius]}
+            />
             <primitive
                 ref={meshRef}
                 object={characterScene}

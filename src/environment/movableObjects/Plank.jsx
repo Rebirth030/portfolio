@@ -4,7 +4,7 @@ export function Plank() {
     return <>
         <PreparedStaticModel
             modelUrl="Models.glb"
-            nodeName="PlankeInstance"
+            nodeName="Plank"
             position={[0, -20, 0]}
             // Schatten/Material-Regeln
             castShadow
@@ -16,7 +16,7 @@ export function Plank() {
         />
         <PreparedStaticModel
             modelUrl="Models.glb"
-            nodeName="PlankeInstance001"
+            nodeName="Plank001"
             position={[0, -20, 0]}
             // Schatten/Material-Regeln
             castShadow
@@ -28,7 +28,7 @@ export function Plank() {
         />
         <PreparedStaticModel
             modelUrl="Models.glb"
-            nodeName="PlankeInstance002"
+            nodeName="Plank002"
             position={[0, -20, 0]}
             // Schatten/Material-Regeln
             castShadow
@@ -40,7 +40,7 @@ export function Plank() {
         />
         <PreparedStaticModel
             modelUrl="Models.glb"
-            nodeName="PlankeInstance003"
+            nodeName="Plank003"
             position={[0, -20, 0]}
             // Schatten/Material-Regeln
             castShadow
