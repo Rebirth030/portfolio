@@ -6,6 +6,7 @@ const GLBS = [
     '/Models.glb',
     '/Character.glb',
     '/PortfolioTerrain.glb',
+    '/Instances.glb',
 ]
 
 const TEXTURES = [

@@ -1,54 +1,38 @@
 // app/state/useGameStore.js
 import { create } from 'zustand'
+import { getFocusPose } from '../app/constants/stations.js'
 
 export const useGameStore = create((set, get) => ({
-    mode: 'Explore',
-    activeStationId: null,
+    // Player-/Overlay-State
+    activeStationId: null,    // von Zonen gesetzt/gelöscht
+    overlayStationId: null,   // steuert das Overlay direkt
     inputLocked: false,
     cameraApi: null,
 
-    focusPoints: new Set([
-
-        ]
-    ),
-
-
-    beginInteraction: async () => {
-        const { cameraApi, zones } = get()
-        if (!cameraApi) return
-        const entry = activeStationId
-        const focusPose = entry?.focusPose
-        if (!focusPose) return
-
-        set({inputLocked: true })
-        try {
-            await cameraApi.focusTo(focusPose)
-            // Später ggf.: set({ mode: 'Overlay' })
-        } catch {
-            await cameraApi.returnToSnapshot().catch(() => {})
-            set({ activeStationId: null, inputLocked: false })
-        }
-    },
-
-    endInteraction: async () => {
-        const { cameraApi } = get()
-        if (!cameraApi) return
-        try {
-            await cameraApi.returnToSnapshot()
-        } finally {
-            set({ activeStationId: null, inputLocked: false, mode: 'Explore' })
-        }
-    },
-
+    // Kamera-API aus CameraController registrieren
     setCameraApi: (api) => set({ cameraApi: api }),
 
+    // von Zonen aufgerufen
+    setActiveStation: (id) => set({ activeStationId: id }),
+    getActiveStation: () => get().activeStationId,
 
-    setActiveStation: (id) => {
-        set({ activeStationId: id })
-        console.log('Station set to:', id)
+    // Interaktion: Fokusfahrt → Overlay öffnen
+    beginInteraction: async (id) => {
+        if (!id) return
+        const { cameraApi } = get()
+        const pose = getFocusPose(id)
+        if (!cameraApi || !pose) return
+
+        try {
+            await cameraApi.focusTo(pose, 1.0)
+            set({ inputLocked: true, overlayStationId: id })
+        } catch {
+            set({ inputLocked: false, overlayStationId: null })
+        }
     },
 
-    getActiveStation: () => {
-        return get().activeStationId
+    // Interaktion beenden
+    endInteraction: () => {
+        set({ inputLocked: false, overlayStationId: null })
     },
 }))

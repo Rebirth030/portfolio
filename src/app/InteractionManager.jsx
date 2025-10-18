@@ -1,52 +1,35 @@
 // app/InteractionManager.jsx
 import { useEffect } from 'react'
 import { useKeyboardControls } from '@react-three/drei'
-import {useGameStore} from "../hooks/useGame.js";
+import { useGameStore } from '../hooks/useGame.js'
 
-
-/**
- * Interaktions-Manager (stabil, ohne Render-Loops):
- * - Subscribt auf "interact" (E) via KeyboardControls-Subscription (edge-triggered)
- * - ESC über native keydown
- * - Greift auf Store-Aktionen via getState() zu, damit keine instabilen Funktions-Refs
- *   in Dependency-Arrays Endlosschleifen verursachen.
- */
 export default function InteractionManager() {
-    // Subscription-API von drei:
-    //  - subscribeKeys(selector, handler)
-    //  - getKeys() für momentane Werte
-    const [subscribeKeys, getKeys] = useKeyboardControls()
+    const [subscribeKeys] = useKeyboardControls()
 
     useEffect(() => {
-        // Handler für "E" gedrückt (nur auf rising edge)
         const unsubInteract = subscribeKeys(
-            // selector: beobachte nur "interact"
-            (state) => state.interact,
-
-            // handler: wird bei jeder Änderung von "interact" aufgerufen
+            (s) => s.interact,
             (pressed) => {
-                console.log(pressed)
-                if (!pressed) return // nur KeyDown
-                const {activeStationId, beginInteraction } = useGameStore.getState()
-                if (!activeStationId) {
-                    beginInteraction()
-                }
+                if (!pressed) return
+                const { activeStationId, beginInteraction } = useGameStore.getState()
+                if (activeStationId) beginInteraction(activeStationId)
             }
         )
 
-        // ESC global – beendet Interaktion (falls aktiv)
-        const onKeyDown = (e) => {
-            if (e.key !== 'Escape') return
-            const { activeStationId, endInteraction } = useGameStore.getState()
-            if (activeStationId) endInteraction()
-        }
-        window.addEventListener('keydown', onKeyDown)
+        const unsubExit = subscribeKeys(
+            (s) => s.escape,
+            (pressed) => {
+                if (!pressed) return
+                const { overlayStationId, endInteraction } = useGameStore.getState()
+                if (overlayStationId) endInteraction()
+            }
+        )
 
         return () => {
             unsubInteract()
-            window.removeEventListener('keydown', onKeyDown)
+            unsubExit()
         }
-    }, [subscribeKeys, getKeys])
+    }, [subscribeKeys])
 
     return null
 }

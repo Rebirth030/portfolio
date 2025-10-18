@@ -1,6 +1,10 @@
 import PreparedStaticModel from "../../app/PrepareStaticModel.jsx";
+import Zone from "../../app/Zone.jsx";
+import {StationId} from "../../app/constants/stations.js";
 
 export default function WoodWorking() {
+    const id = StationId.WORKSHOP
+
     return<>
         <PreparedStaticModel
             modelUrl="Models.glb"
@@ -15,5 +19,6 @@ export default function WoodWorking() {
             friction={1.5}
             restitution={0}
         />
+        <Zone id={id}/>
     </>
 }

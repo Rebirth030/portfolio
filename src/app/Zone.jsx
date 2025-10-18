@@ -1,15 +1,17 @@
 // app/Zone.jsx
-import { useEffect, useMemo, useRef } from 'react'
-import { RigidBody, CuboidCollider, interactionGroups } from '@react-three/rapier'
+
+import { RigidBody, CuboidCollider} from '@react-three/rapier'
 
 import {useGameStore} from "../hooks/useGame.js";
+import {getZone} from "./constants/stations.js";
 
 
-export default function Zone({ id, zone, focusPose }) {
+export default function Zone({ id}) {
     const setActiveStation = useGameStore((s) => s.setActiveStation)
 
     const onEnter = () => setActiveStation(id)
     const onExit  = () => setActiveStation(null)
+    const zone = getZone(id)
 
     return (
         <RigidBody type="fixed" colliders={false} enabledRotations={[false,false,false]} ccd={false}>
