@@ -9,7 +9,7 @@ export default function Monolith() {
             // Schatten/Material-Regeln
             castShadow
             // Physik
-            colliders="hull"
+            colliders="cuboid"
             type="fixed"
             friction={1.5}
             restitution={0}

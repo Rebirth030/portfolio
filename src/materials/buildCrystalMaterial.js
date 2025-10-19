@@ -161,7 +161,7 @@ export default function buildCrystalMaterial(oldMesh, matParams = {}) {
 
     // Material-Outputs
     mat.colorNode    = toned
-    mat.emissiveNode = add(mat.emissiveNode ?? vec3(0.0), rimRGB)
+    mat.emissiveNode = min(add(mat.emissiveNode ?? vec3(0.0), rimRGB), vec3(5.0))
 
     return mat
 }

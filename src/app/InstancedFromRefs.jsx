@@ -121,7 +121,7 @@ function InstancedFromRefsCore({
                                    refsUrl,
                                    filter,
                                    relativeTo = null,
-                                   frustumCulled = false,
+                                   frustumCulled = true,
                                    physics = false,
 
                                    // Collider-Modus & Parameter für Sockel
@@ -188,6 +188,8 @@ function InstancedFromRefsCore({
             im.setMatrixAt(i, combined)
         }
         im.instanceMatrix.needsUpdate = true
+        meshRef.current.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+        meshRef.current.geometry.attributes.position.setUsage(THREE.StaticDrawUsage);
     }, [mats, count, useManualInstancing, parentMatrix])
 
     useEffect(() => {
@@ -346,7 +348,7 @@ export function InstancedFromRefs({
                                       refsUrl,           // GLB mit Referenz-Nodes
                                       filter,            // Funktion | RegExp | String
                                       relativeTo = null,
-                                      frustumCulled = false,
+                                      frustumCulled = true,
                                       wind = null,
                                       physics = false,
                                       type = 'fixed',
@@ -397,7 +399,7 @@ export function InstancedFromRefsMesh({
                                           refsUrl,              // GLB mit Instanz-Refs (REQUIRED)
                                           filter,
                                           relativeTo = null,
-                                          frustumCulled = false,
+                                          frustumCulled = true,
                                           wind = null,
                                           physics = false,
                                           type = 'fixed',

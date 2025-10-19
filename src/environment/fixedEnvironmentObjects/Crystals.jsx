@@ -13,12 +13,8 @@ function pickMeshByName(root, name) {
 
 function prepareCrystalMesh(srcMesh, matParams) {
     const geo = srcMesh.geometry
-    geo.computeVertexNormals()
-    geo.computeBoundingBox()
 
     const bb = geo.boundingBox
-    const yMin = bb.min.y
-    const yMax = bb.max.y
     const center = new THREE.Vector3()
     bb.getCenter(center)
 
@@ -168,7 +164,7 @@ export default function Crystals() {
                     refsUrl="/Instances.glb"
                     filter={(o) => o.isMesh && o.name.startsWith('Crystal_1_Instance')}
                     position={[0, -20, 0]}
-                    frustumCulled={false}
+                    frustumCulled
                     physics
                 />
             )}
@@ -178,7 +174,7 @@ export default function Crystals() {
                     refsUrl="/Instances.glb"
                     filter={(o) => o.isMesh && o.name.startsWith('Crystal_2_Instance')}
                     position={[0, -20, 0]}
-                    frustumCulled={false}
+                    frustumCulled
                     physics
                 />
             )}
@@ -188,7 +184,7 @@ export default function Crystals() {
                     refsUrl="/Instances.glb"
                     filter={(o) => o.isMesh && o.name.startsWith('Crystal_3_Instance')}
                     position={[0, -20, 0]}
-                    frustumCulled={false}
+                    frustumCulled
                     physics
                 />
             )}

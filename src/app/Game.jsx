@@ -11,6 +11,7 @@ import CameraController from './CameraController.jsx'
 import InteractionManager from './InteractionManager.jsx'
 import {useRef} from "react";
 import OverlayRoot from "./overlays/OverlayRoot.jsx";
+import PipelineWarmup from "./PipelineWarmup.jsx";
 
 
 
@@ -21,7 +22,6 @@ export default function Game() {
     return (
         <>
             <Physics debug={false} updateLoop="follow" timestep="fixed">
-                <PreloadAssets />
                 <Environment playerRef={playerRef} />
                 <Player ref={playerRef} />
             </Physics>
@@ -29,7 +29,7 @@ export default function Game() {
             <CameraController playerRef={playerRef} />
             <InteractionManager />
 
-            <Postprocessing />
+            <Postprocessing/>
         </>
     )
 }

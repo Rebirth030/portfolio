@@ -16,8 +16,8 @@ export default function InstancedBushes() {
             modelMesh={modelMesh}
             refsUrl="/Instances.glb"
             filter={(o) => o.isMesh && o.name.startsWith('Bush')}
-            castShadow
-            receiveShadow
+            castShadow={false}
+            receiveShadow={true}
             position={[0, -20, 0]}
             wind={{
                 windDirectionX: -1.0,

@@ -1,6 +1,5 @@
 // utils/foliageUtils.js
-import * as THREE from 'three'
-import {MeshPhysicalNodeMaterial} from 'three/webgpu'
+import * as THREE from 'three/webgpu'
 import {
     texture, uv, screenUV, screenSize,
     vec2, vec3, float, uniform,
@@ -8,6 +7,7 @@ import {
     normalize, normalWorld, saturate, dot,
     abs, dFdx, dFdy, max
 } from 'three/tsl'
+import {MeshPhysicalNodeMaterial} from "three/webgpu";
 
 // Linearer Loader für Masken/SDFs (keine Farbraumkonvertierung)
 export function loadMaskTexture(url) {
@@ -43,6 +43,15 @@ function sdfCoverageAlphaChannel(sdfTexture, thresholdNode, softnessNode) {
 
     const spread = mul(softnessNode, fw) // skalenrobuste Kantenbreite
     return smoothstep(sub(thresholdNode, spread), add(thresholdNode, spread), sdf01)
+}
+
+function makeLeafDistanceMaterial(coverageNode, side = THREE.FrontSide) {
+    const m = new THREE.MeshBasicNodeMaterial();
+    m.opacityNode = coverageNode; // dieselbe Coverage wie im Sichtbarkeitsmaterial
+    m.transparent = false;
+    m.alphaTest = 0.5;            // wie im Hauptmaterial
+    m.side = side;
+    return m;
 }
 
 /* -------------------------------------------------------------
@@ -115,6 +124,7 @@ export function createTreeLeafMaterialSDF({
     )
 
     // --- SDF-Coverage (gemeinsamer Helfer) ---
+
     const coverage = sdfCoverageAlphaChannel(sdfTex, thEff, uSoftness)
 
     // --- PBR-Node-Material ---
@@ -130,6 +140,8 @@ export function createTreeLeafMaterialSDF({
         transparent: false,
         alphaTest
     })
+    mat.customDistanceMaterial = makeLeafDistanceMaterial(coverage, THREE.FrontSide);
+    mat.shadowSide = THREE.FrontSide; // Schatten nur von vorn – halbiert effektiv die Shadow-Overdraw
 
     // Gegenlicht-Fake (als Uniform steuerbar)
     const L = normalize(vec3(sunDir.x, sunDir.y, sunDir.z))
@@ -183,6 +195,8 @@ export function createLeafMaterial({
         transparent: false,
         alphaTest
     })
+    material.customDistanceMaterial = makeLeafDistanceMaterial(coverage, THREE.FrontSide);
+    material.shadowSide = THREE.FrontSide; // Schatten nur von vorn – halbiert effektiv die Shadow-Overdraw
 
     // Backlight-Fake in Blattfarbe
     const L = normalize(vec3(sunDir.x, sunDir.y, sunDir.z))

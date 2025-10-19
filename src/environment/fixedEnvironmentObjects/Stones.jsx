@@ -7,7 +7,6 @@ export default function Stones() {
             modelFilter={(o) => o.name.startsWith('Stone_1')}
             refsUrl="/Instances.glb"
             filter={(o) => o.isMesh && o.name.startsWith('Stone1Instance')}
-            castShadow
             receiveShadow
             position={[0, -20, 0]}
             physics
@@ -17,7 +16,6 @@ export default function Stones() {
             modelFilter={(o) => o.name.startsWith('Stone_2')}
             refsUrl="/Instances.glb"
             filter={(o) => o.isMesh && o.name.startsWith('Stone2Instance')}
-            castShadow
             receiveShadow
             position={[0, -20, 0]}
             physics

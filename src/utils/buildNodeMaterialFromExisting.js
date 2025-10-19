@@ -5,10 +5,20 @@ import {
     add, sub, mul, div, pow, dot, mix, smoothstep,
     uv, vec2, vec3, float, uniform, length, clamp, color
 } from 'three/tsl'
-import {texture} from "three/src/Three.TSL.js";
+import { texture } from 'three/src/Three.TSL.js'
+
+// --- NEU: Cache pro Quell-Material (vermeidet Mehrfach-Konvertierung) ---
+const _nodeMatCache = new WeakMap()
 
 export default function buildNodeMaterialFromExisting(oldMaterial, opts = {}) {
     if (!oldMaterial) return null
+
+    // Bereits ein NodeMaterial? Direkt zurückgeben.
+    if (oldMaterial.isNodeMaterial) return oldMaterial
+
+    // Bereits konvertiert? Aus dem Cache liefern.
+    const cached = _nodeMatCache.get(oldMaterial)
+    if (cached) return cached
 
     const needsPhysical =
         (oldMaterial.transmission ?? 0) > 0 ||
@@ -27,10 +37,10 @@ export default function buildNodeMaterialFromExisting(oldMaterial, opts = {}) {
     // Basis
     nm.name       = oldMaterial.name ?? 'ConvertedNodeMat'
     nm.toneMapped = (oldMaterial.toneMapped !== undefined) ? oldMaterial.toneMapped : true
-    nm.side       = oldMaterial.side ?? THREE.Front
+    nm.side       = oldMaterial.side ?? THREE.FrontSide
 
     // Farben & Maps
-    nm.color          = (oldMaterial.color && oldMaterial.color.isColor) ? oldMaterial.color : new THREE.Color('white')
+    nm.color          = (oldMaterial.color && oldMaterial.color.isColor) ? oldMaterial.color.clone() : new THREE.Color('white')
     nm.map            = oldMaterial.map ?? null
     nm.normalMap      = oldMaterial.normalMap ?? null
     nm.aoMap          = oldMaterial.aoMap ?? null
@@ -84,6 +94,7 @@ export default function buildNodeMaterialFromExisting(oldMaterial, opts = {}) {
     // Env
     if (oldMaterial.envMapIntensity !== undefined) nm.envMapIntensity = oldMaterial.envMapIntensity
 
+    // --- NEU: in den Cache legen und zurückgeben ---
+    _nodeMatCache.set(oldMaterial, nm)
     return nm
 }
-

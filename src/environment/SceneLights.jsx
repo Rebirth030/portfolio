@@ -25,7 +25,7 @@ export default function SceneLights({ playerRef }) {
     } = useControls('Lighting', {
         Ambient: folder({
             ambColor: { value: '#b7c9ff' },
-            ambIntensity: { value: 1.57, min: 0, max: 3, step: 0.01 },
+            ambIntensity: { value: 0.61, min: 0, max: 3, step: 0.01 },
         }, { collapsed: true }),
         Directional: folder({
             color: { value: '#ddddff' },

@@ -29,7 +29,7 @@ export default function createBushMesh({
     const material = createLeafMaterial({ sdfUrl, baseLin, backlight, sunDir, alphaTest, softness })
 
     const mesh = new THREE.Mesh(geometry, material)
-    mesh.castShadow = true
+    mesh.castShadow = false
     mesh.receiveShadow = true
     return mesh
 }

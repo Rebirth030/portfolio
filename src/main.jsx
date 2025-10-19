@@ -12,7 +12,6 @@ import OverlayRoot from "./app/overlays/OverlayRoot.jsx";
 
 createRoot(document.getElementById('root')).render(
     <Suspense fallback={<div>Loading…</div>}>
-        <StrictMode>
             <Leva />
             <KeyboardControls
                 map={[
@@ -45,6 +44,5 @@ createRoot(document.getElementById('root')).render(
                 </Canvas>
                 <OverlayRoot />
             </KeyboardControls>
-        </StrictMode>
     </Suspense>
 )

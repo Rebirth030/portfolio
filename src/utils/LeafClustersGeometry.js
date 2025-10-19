@@ -71,5 +71,6 @@ export function createLeafClusterGeometry({
     const geometry = mergeGeometries(geos, false)
     geometry.computeBoundingSphere()
     geometry.computeBoundingBox()
+
     return geometry
 }
